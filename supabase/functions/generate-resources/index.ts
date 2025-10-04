@@ -32,6 +32,11 @@ serve(async (req) => {
     });
 
     const data = await aiResponse.json();
+    if (!aiResponse.ok) {
+      console.error('AI API Error:', data);
+      throw new Error(data.error?.message || 'AI generation failed');
+    }
+    
     const resources = JSON.parse(data.choices[0].message.content);
 
     for (const resource of resources) {

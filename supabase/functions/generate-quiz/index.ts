@@ -11,7 +11,7 @@ serve(async (req) => {
   try {
     const { topic, quizType } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    const numQuestions = quizType === 'final_test' ? 10 : 5;
+    const numQuestions = quizType === 'final_test' ? 10 : 25;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -23,12 +23,46 @@ serve(async (req) => {
         model: 'google/gemini-2.5-flash',
         messages: [{
           role: 'user',
-          content: `Generate ${numQuestions} multiple choice questions about "${topic}". Return as JSON: {"questions": [{"question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": 0}]}. correctAnswer is the index (0-3) of the correct option.`
+          content: `Generate ${numQuestions} high-quality multiple choice questions about "${topic}". 
+          
+Focus on quality over quantity. Mix theoretical and practical questions.
+
+Also generate AI metrics for this ${quizType}:
+- Practicality/Theoretical split (e.g., "60% Theoretical / 40% Practical")
+- Predictability rating (e.g., "Highly Predictable", "Moderately Predictable")
+- Difficulty level (e.g., "Intermediate Graduate Level", "High Graduate Level")
+- Alignment percentage (e.g., "100% Aligned with designated resources")
+- Estimated learning time (e.g., "5-10 minutes per attempt")
+- Proficiency required (e.g., "Basic understanding of concepts")
+
+Return as JSON:
+{
+  "questions": [
+    {
+      "question": "detailed question text",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswer": 0
+    }
+  ],
+  "metrics": {
+    "practicalityTheoretical": "percentage split",
+    "predictability": "rating",
+    "difficulty": "level description",
+    "alignment": "percentage aligned",
+    "learningTime": "time estimate",
+    "proficiency": "required level"
+  }
+}`
         }],
       }),
     });
 
     const data = await aiResponse.json();
+    if (!aiResponse.ok) {
+      console.error('AI API Error:', data);
+      throw new Error(data.error?.message || 'AI generation failed');
+    }
+    
     const quiz = JSON.parse(data.choices[0].message.content);
 
     return new Response(JSON.stringify(quiz), {
