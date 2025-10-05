@@ -70,7 +70,9 @@ Return as JSON:
       ]
     }
   ]
-}`
+}
+
+IMPORTANT: Output ONLY raw JSON. Do not include any markdown, backticks, or code fences.`
         }],
       }),
     });
@@ -84,12 +86,35 @@ Return as JSON:
     const data = await aiResponse.json();
     console.log('AI Response:', JSON.stringify(data, null, 2));
     
-    let assignmentData;
+    // Sanitize and parse JSON returned by the model (sometimes wrapped in ```json fences)
+    const raw = data?.choices?.[0]?.message?.content ?? '';
+    const cleaned = raw
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```$/i, '')
+      .trim();
+
+    let assignmentData: any;
     try {
-      assignmentData = JSON.parse(data.choices[0].message.content);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', data.choices[0].message.content);
-      throw new Error('Invalid AI response format');
+      assignmentData = JSON.parse(cleaned);
+    } catch (e1) {
+      // Fallback: try to extract the JSON object/array boundaries
+      const tryCandidates: string[] = [];
+      const objStart = cleaned.indexOf('{');
+      const objEnd = cleaned.lastIndexOf('}');
+      const arrStart = cleaned.indexOf('[');
+      const arrEnd = cleaned.lastIndexOf(']');
+      if (objStart !== -1 && objEnd > objStart) tryCandidates.push(cleaned.slice(objStart, objEnd + 1));
+      if (arrStart !== -1 && arrEnd > arrStart) tryCandidates.push(cleaned.slice(arrStart, arrEnd + 1));
+
+      let parsedOk = false;
+      for (const c of tryCandidates) {
+        try { assignmentData = JSON.parse(c); parsedOk = true; break; } catch {}
+      }
+      if (!parsedOk) {
+        console.error('Failed to parse AI response:', raw);
+        throw new Error('Invalid AI response format');
+      }
     }
 
     await supabase.from('assignments').upsert({

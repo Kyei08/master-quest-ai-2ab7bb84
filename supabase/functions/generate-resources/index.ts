@@ -34,7 +34,7 @@ serve(async (req) => {
         model: 'google/gemini-2.5-flash',
         messages: [{
           role: 'user',
-          content: `Generate 5 high-quality learning resources for the topic "${topic}". Return as JSON array with format: [{"title": "...", "url": "..."}]. Use real URLs to quality resources like documentation, tutorials, or courses.`
+          content: `Generate 5 high-quality learning resources for the topic "${topic}". Return ONLY a raw JSON array with format: [{"title": "...", "url": "..."}] with no code fences, no markdown, and no extra text. Use real URLs to quality resources like documentation, tutorials, or courses.`
         }],
       }),
     });
@@ -48,12 +48,34 @@ serve(async (req) => {
     const data = await aiResponse.json();
     console.log('AI Response:', JSON.stringify(data, null, 2));
     
-    let resources;
+    // Sanitize and parse JSON returned by the model (sometimes wrapped in ```json fences)
+    const raw = data?.choices?.[0]?.message?.content ?? '';
+    const cleaned = raw
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```$/i, '')
+      .trim();
+
+    let resources: Array<{ title: string; url: string }> = [];
     try {
-      resources = JSON.parse(data.choices[0].message.content);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', data.choices[0].message.content);
-      throw new Error('Invalid AI response format');
+      resources = JSON.parse(cleaned);
+    } catch (e1) {
+      const tryCandidates: string[] = [];
+      const objStart = cleaned.indexOf('{');
+      const objEnd = cleaned.lastIndexOf('}');
+      const arrStart = cleaned.indexOf('[');
+      const arrEnd = cleaned.lastIndexOf(']');
+      if (objStart !== -1 && objEnd > objStart) tryCandidates.push(cleaned.slice(objStart, objEnd + 1));
+      if (arrStart !== -1 && arrEnd > arrStart) tryCandidates.push(cleaned.slice(arrStart, arrEnd + 1));
+
+      let parsedOk = false;
+      for (const c of tryCandidates) {
+        try { resources = JSON.parse(c); parsedOk = true; break; } catch {}
+      }
+      if (!parsedOk) {
+        console.error('Failed to parse AI response:', raw);
+        throw new Error('Invalid AI response format');
+      }
     }
 
     for (const resource of resources) {

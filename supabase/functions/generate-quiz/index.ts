@@ -74,11 +74,32 @@ Return as JSON:
     const data = await aiResponse.json();
     console.log('AI Response:', JSON.stringify(data, null, 2));
     
-    let quiz;
+    let quiz: any;
     try {
-      quiz = JSON.parse(data.choices[0].message.content);
+      const raw = data?.choices?.[0]?.message?.content ?? '';
+      const cleaned = raw
+        .trim()
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/```$/i, '')
+        .trim();
+
+      try {
+        quiz = JSON.parse(cleaned);
+      } catch {
+        const candidates: string[] = [];
+        const objStart = cleaned.indexOf('{');
+        const objEnd = cleaned.lastIndexOf('}');
+        const arrStart = cleaned.indexOf('[');
+        const arrEnd = cleaned.lastIndexOf(']');
+        if (objStart !== -1 && objEnd > objStart) candidates.push(cleaned.slice(objStart, objEnd + 1));
+        if (arrStart !== -1 && arrEnd > arrStart) candidates.push(cleaned.slice(arrStart, arrEnd + 1));
+
+        let ok = false;
+        for (const c of candidates) { try { quiz = JSON.parse(c); ok = true; break; } catch {} }
+        if (!ok) throw new Error('parse_failed');
+      }
     } catch (parseError) {
-      console.error('Failed to parse AI response:', data.choices[0].message.content);
+      console.error('Failed to parse AI response:', data?.choices?.[0]?.message?.content);
       throw new Error('Invalid AI response format');
     }
 
