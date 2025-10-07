@@ -96,15 +96,15 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
     return (
       <Card className="shadow-card-custom">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 mb-2">
                 <FileText className="w-5 h-5 text-primary" />
                 Module Assignment
               </CardTitle>
               <CardDescription>AI-generated practical tasks for {moduleTopic}</CardDescription>
             </div>
-            <Button onClick={generateAssignment} disabled={generating}>
+            <Button onClick={generateAssignment} disabled={generating} className="w-full sm:w-auto">
               <Sparkles className="w-4 h-4 mr-2" />
               {generating ? "Generating..." : "Generate Assignment"}
             </Button>
