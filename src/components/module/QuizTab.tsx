@@ -31,34 +31,33 @@ interface QuizData {
 interface QuizTabProps {
   moduleId: string;
   moduleTopic: string;
+  quizType: "quiz" | "final_test";
   onComplete: () => void;
 }
 
-const QuizTab = ({ moduleId, moduleTopic, onComplete }: QuizTabProps) => {
+const QuizTab = ({ moduleId, moduleTopic, quizType, onComplete }: QuizTabProps) => {
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [generating, setGenerating] = useState(false);
-  const [quizType, setQuizType] = useState<"quiz" | "final_test" | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
-  const generateQuiz = async (type: "quiz" | "final_test") => {
+  const generateQuiz = async () => {
     setGenerating(true);
-    setQuizType(type);
     setShowResults(false);
     setAnswers({});
     setCurrentQuestionIndex(0);
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-quiz", {
-        body: { moduleId, topic: moduleTopic, quizType: type },
+        body: { moduleId, topic: moduleTopic, quizType },
       });
 
       if (error) throw error;
 
       setQuizData(data);
-      toast.success(`${type === "quiz" ? "Quiz" : "Final Test"} generated!`);
+      toast.success(`${quizType === "quiz" ? "Quiz" : "Final Test"} generated!`);
     } catch (error: any) {
       console.error("Quiz generation error:", error);
       toast.error(error.message || "Failed to generate quiz");
@@ -113,46 +112,37 @@ const QuizTab = ({ moduleId, moduleTopic, onComplete }: QuizTabProps) => {
 
   if (!quizData) {
     return (
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="shadow-card-custom">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              Practice Quiz
-            </CardTitle>
-            <CardDescription>
-              Test your understanding with a practice quiz (25 questions)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => generateQuiz("quiz")} disabled={generating} className="w-full">
-              {generating ? "Generating..." : "Generate Practice Quiz"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card-custom border-primary/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-accent" />
-              Final Test
-            </CardTitle>
-            <CardDescription>
-              Take the final test to complete this module (80% required)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              onClick={() => generateQuiz("final_test")}
-              disabled={generating}
-              variant="default"
-              className="w-full bg-red-600 hover:bg-red-700"
-            >
-              {generating ? "Generating..." : "Take Final Test"}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="shadow-card-custom">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {quizType === "quiz" ? (
+              <>
+                <Sparkles className="w-5 h-5 text-primary" />
+                Practice Quiz
+              </>
+            ) : (
+              <>
+                <GraduationCap className="w-5 h-5 text-accent" />
+                Final Test
+              </>
+            )}
+          </CardTitle>
+          <CardDescription>
+            {quizType === "quiz" 
+              ? "Test your understanding with a practice quiz (25 questions)"
+              : "Take the final test to complete this module (80% required)"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={generateQuiz} 
+            disabled={generating} 
+            className={quizType === "final_test" ? "w-full bg-red-600 hover:bg-red-700" : "w-full"}
+          >
+            {generating ? "Generating..." : quizType === "quiz" ? "Generate Practice Quiz" : "Take Final Test"}
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 

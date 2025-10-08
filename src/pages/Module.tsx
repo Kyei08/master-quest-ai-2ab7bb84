@@ -109,7 +109,7 @@ const Module = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-5 mb-8">
             <TabsTrigger value="resources">
               <BookOpen className="w-4 h-4 mr-2" />
               Resources
@@ -120,7 +120,11 @@ const Module = () => {
             </TabsTrigger>
             <TabsTrigger value="quiz">
               <Sparkles className="w-4 h-4 mr-2" />
-              Practice
+              Practice Quiz
+            </TabsTrigger>
+            <TabsTrigger value="final-test">
+              <GraduationCap className="w-4 h-4 mr-2" />
+              Final Test
             </TabsTrigger>
             <TabsTrigger value="results">
               <GraduationCap className="w-4 h-4 mr-2" />
@@ -137,7 +141,11 @@ const Module = () => {
           </TabsContent>
 
           <TabsContent value="quiz">
-            <QuizTab moduleId={id!} moduleTopic={module.topic} onComplete={() => setActiveTab("results")} />
+            <QuizTab moduleId={id!} moduleTopic={module.topic} quizType="quiz" onComplete={() => setActiveTab("results")} />
+          </TabsContent>
+
+          <TabsContent value="final-test">
+            <QuizTab moduleId={id!} moduleTopic={module.topic} quizType="final_test" onComplete={() => setActiveTab("results")} />
           </TabsContent>
 
           <TabsContent value="results">
