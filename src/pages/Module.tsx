@@ -64,10 +64,11 @@ const Module = () => {
       if (error) throw error;
 
       toast.success("Module reset! You can start fresh.");
-      // Clear any saved quiz sessions for this module
+      // Clear any saved assessment sessions for this module
       try {
         localStorage.removeItem(`quizState:${id}:quiz`);
         localStorage.removeItem(`quizState:${id}:final_test`);
+        localStorage.removeItem(`assignmentState:${id}`);
       } catch {}
       loadModule();
       setActiveTab("resources");

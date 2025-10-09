@@ -45,9 +45,38 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
   const [currentSection, setCurrentSection] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
+  // Persist assignment state locally
+  const storageKey = `assignmentState:${moduleId}`;
+
   useEffect(() => {
     loadAssignment();
   }, [moduleId]);
+
+  // Load saved state from localStorage
+  useEffect(() => {
+    const raw = localStorage.getItem(storageKey);
+    if (raw) {
+      try {
+        const saved = JSON.parse(raw);
+        if (saved.answers) setAnswers(saved.answers);
+        if (saved.currentSection !== undefined) setCurrentSection(saved.currentSection);
+      } catch (e) {
+        console.error("Failed to load saved assignment state", e);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    if (!assignment) return;
+    try {
+      const payload = { answers, currentSection };
+      localStorage.setItem(storageKey, JSON.stringify(payload));
+    } catch (e) {
+      // ignore write errors
+    }
+  }, [answers, currentSection, assignment, storageKey]);
 
   const loadAssignment = async () => {
     const { data, error } = await supabase
