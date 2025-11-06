@@ -108,26 +108,28 @@ const Module = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 mb-8">
-            <TabsTrigger value="resources">
-              <BookOpen className="w-4 h-4 mr-2" />
-              Resources
+          <TabsList className="grid w-full grid-cols-5 mb-8 h-auto gap-1 p-1">
+            <TabsTrigger value="resources" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+              <BookOpen className="w-4 h-4 sm:mr-0" />
+              <span className="text-xs sm:text-sm">Resources</span>
             </TabsTrigger>
-            <TabsTrigger value="assignment">
-              <FileText className="w-4 h-4 mr-2" />
-              Assignment
+            <TabsTrigger value="assignment" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+              <FileText className="w-4 h-4 sm:mr-0" />
+              <span className="text-xs sm:text-sm">Assignment</span>
             </TabsTrigger>
-            <TabsTrigger value="quiz">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Practice Quiz
+            <TabsTrigger value="quiz" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+              <Sparkles className="w-4 h-4 sm:mr-0" />
+              <span className="text-xs sm:text-sm hidden sm:inline">Practice Quiz</span>
+              <span className="text-xs sm:hidden">Quiz</span>
             </TabsTrigger>
-            <TabsTrigger value="final-test">
-              <GraduationCap className="w-4 h-4 mr-2" />
-              Final Test
+            <TabsTrigger value="final-test" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+              <GraduationCap className="w-4 h-4 sm:mr-0" />
+              <span className="text-xs sm:text-sm hidden sm:inline">Final Test</span>
+              <span className="text-xs sm:hidden">Test</span>
             </TabsTrigger>
-            <TabsTrigger value="results">
-              <GraduationCap className="w-4 h-4 mr-2" />
-              Results
+            <TabsTrigger value="results" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+              <GraduationCap className="w-4 h-4 sm:mr-0" />
+              <span className="text-xs sm:text-sm">Results</span>
             </TabsTrigger>
           </TabsList>
 
