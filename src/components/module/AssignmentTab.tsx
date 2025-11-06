@@ -217,7 +217,7 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
         onRegenerate={generateAssignment}
       />
       
-      <CardContent>
+      <CardContent className="p-4 sm:p-6">
         {lastAutoSave && (
           <div className="mb-4 text-xs text-muted-foreground text-right animate-fade-in">
             Last saved: {lastAutoSave.toLocaleTimeString()}
@@ -241,9 +241,9 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
           onSubmit={submitAssignment}
         />
 
-        <div className="mt-8 border-t pt-6">
-          <h4 className="font-semibold mb-4">Resources for this Assignment</h4>
-          <p className="text-sm text-muted-foreground">
+        <div className="mt-6 sm:mt-8 border-t pt-4 sm:pt-6">
+          <h4 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Resources for this Assignment</h4>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Check the Resources tab for curated learning materials.
           </p>
         </div>

@@ -11,30 +11,34 @@ interface AssignmentEmptyProps {
 export const AssignmentEmpty = ({ moduleTopic, generating, onGenerate }: AssignmentEmptyProps) => {
   return (
     <Card className="shadow-card-custom animate-fade-in">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
+      <CardHeader className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl break-words">
+              <FileText className="w-5 h-5 text-primary shrink-0" />
               Module Assignment
             </CardTitle>
-            <CardDescription>AI-generated practical tasks for {moduleTopic}</CardDescription>
+            <CardDescription className="text-xs sm:text-sm break-words">
+              AI-generated practical tasks for {moduleTopic}
+            </CardDescription>
           </div>
           <Button 
             onClick={onGenerate} 
             disabled={generating}
-            className="transition-all duration-200 hover:scale-105"
+            className="transition-all duration-200 hover:scale-105 w-full sm:w-auto touch-manipulation"
+            size="sm"
           >
             <Sparkles className="w-4 h-4 mr-2" />
-            {generating ? "Generating..." : "Generate Assignment"}
+            <span className="hidden sm:inline">{generating ? "Generating..." : "Generate Assignment"}</span>
+            <span className="sm:hidden">{generating ? "Generating..." : "Generate"}</span>
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-center py-12">
-          <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground animate-pulse" />
-          <p className="text-muted-foreground">
-            No assignment yet. Click "Generate Assignment" to create one.
+      <CardContent className="p-4 sm:p-6">
+        <div className="text-center py-8 sm:py-12">
+          <FileText className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 text-muted-foreground animate-pulse" />
+          <p className="text-sm sm:text-base text-muted-foreground">
+            No assignment yet. Click "Generate" to create one.
           </p>
         </div>
       </CardContent>

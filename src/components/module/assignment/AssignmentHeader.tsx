@@ -33,20 +33,27 @@ export const AssignmentHeader = ({
   onRegenerate
 }: AssignmentHeaderProps) => {
   return (
-    <CardHeader>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex-1">
-          <CardTitle className="text-2xl mb-2">
+    <CardHeader className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+        <div className="flex-1 min-w-0">
+          <CardTitle className="text-xl sm:text-2xl mb-2 break-words">
             Module: {moduleTopic} - Assignment
           </CardTitle>
-          <CardDescription className="mb-2">
+          <CardDescription className="mb-2 text-sm">
             **{title}** (Total Marks: {totalMarks})
           </CardDescription>
-          <p className="text-sm">{description}</p>
+          <p className="text-xs sm:text-sm break-words">{description}</p>
         </div>
-        <Button onClick={onRegenerate} disabled={generating} variant="outline">
+        <Button 
+          onClick={onRegenerate} 
+          disabled={generating} 
+          variant="outline"
+          className="w-full sm:w-auto shrink-0"
+          size="sm"
+        >
           <Sparkles className="w-4 h-4 mr-2" />
-          Regenerate
+          <span className="hidden sm:inline">Regenerate</span>
+          <span className="sm:hidden">Regen</span>
         </Button>
       </div>
       
@@ -57,6 +64,7 @@ export const AssignmentHeader = ({
             variant={currentSection === index ? "default" : "outline"}
             onClick={() => onSectionChange(index)}
             size="sm"
+            className="min-w-[80px] touch-manipulation"
           >
             Section {section.id}
           </Button>

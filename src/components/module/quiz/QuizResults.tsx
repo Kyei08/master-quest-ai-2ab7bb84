@@ -32,21 +32,21 @@ export const QuizResults = ({
 
   return (
     <Card className="shadow-card-custom animate-fade-in">
-      <CardHeader>
-        <CardTitle>
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="text-lg sm:text-xl">
           {quizType === "quiz" ? "Quiz Results" : "Final Test Results"}
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-center">
+      <CardContent className="text-center p-4 sm:p-6">
         <div className="mb-6">
-          <div className="text-6xl font-bold mb-2 animate-scale-in">{score}%</div>
+          <div className="text-5xl sm:text-6xl font-bold mb-2 animate-scale-in">{score}%</div>
           <Badge 
             variant={score >= 80 ? "default" : "destructive"} 
-            className="mb-4 animate-fade-in"
+            className="mb-4 animate-fade-in text-xs sm:text-sm"
           >
             {score >= 80 ? "Passed!" : "Keep Practicing"}
           </Badge>
-          <p className="text-muted-foreground animate-fade-in">
+          <p className="text-sm sm:text-base text-muted-foreground animate-fade-in">
             {quizType === "final_test" 
               ? `You scored ${totalMarks} out of ${totalPossibleMarks} marks`
               : `You got ${correctAnswers} out of ${questions.length} correct`
@@ -55,7 +55,8 @@ export const QuizResults = ({
         </div>
         <Button 
           onClick={onTryAgain}
-          className="transition-all duration-200 hover:scale-105"
+          className="transition-all duration-200 hover:scale-105 w-full sm:w-auto touch-manipulation"
+          size="lg"
         >
           <RotateCcw className="w-4 h-4 mr-2" />
           Try Again
