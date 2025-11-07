@@ -1,11 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, FileDown } from "lucide-react";
+import { exportQuizToPDF } from "@/lib/pdfExport";
 
 interface Question {
+  question: string;
+  type: string;
+  options?: string[];
   marks: number;
   correctAnswer?: number | string;
+  section?: string;
 }
 
 interface QuizResultsProps {
@@ -15,6 +20,7 @@ interface QuizResultsProps {
   questions: Question[];
   answers: Record<number, number | string>;
   onTryAgain: () => void;
+  moduleTopic: string;
 }
 
 export const QuizResults = ({ 
@@ -23,7 +29,8 @@ export const QuizResults = ({
   totalMarks, 
   questions, 
   answers, 
-  onTryAgain 
+  onTryAgain,
+  moduleTopic
 }: QuizResultsProps) => {
   const totalPossibleMarks = questions.reduce((sum, q) => sum + q.marks, 0);
   const correctAnswers = Object.values(answers).filter(
@@ -53,14 +60,25 @@ export const QuizResults = ({
             }
           </p>
         </div>
-        <Button 
-          onClick={onTryAgain}
-          className="transition-all duration-200 hover:scale-105 w-full sm:w-auto touch-manipulation"
-          size="lg"
-        >
-          <RotateCcw className="w-4 h-4 mr-2" />
-          Try Again
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button
+            variant="outline"
+            onClick={() => exportQuizToPDF(moduleTopic, quizType, questions, answers, score)}
+            className="transition-all duration-200 hover:scale-105 touch-manipulation"
+            size="lg"
+          >
+            <FileDown className="w-4 h-4 mr-2" />
+            Export PDF
+          </Button>
+          <Button 
+            onClick={onTryAgain}
+            className="transition-all duration-200 hover:scale-105 touch-manipulation"
+            size="lg"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

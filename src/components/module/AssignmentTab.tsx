@@ -10,6 +10,9 @@ import { AssignmentSection } from "./assignment/AssignmentSection";
 import { AssignmentNavigation } from "./assignment/AssignmentNavigation";
 import { SyncIndicator } from "./SyncIndicator";
 import { ProgressIndicator } from "./ProgressIndicator";
+import { exportAssignmentToPDF } from "@/lib/pdfExport";
+import { Button } from "@/components/ui/button";
+import { FileDown } from "lucide-react";
 
 interface Task {
   id: string;
@@ -276,7 +279,15 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
       />
       
       <CardContent className="p-4 sm:p-6">
-        <div className="flex justify-end items-center mb-4">
+        <div className="flex justify-between items-center mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportAssignmentToPDF(moduleTopic, assignment.content.sections, answers)}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
           <SyncIndicator
             syncing={syncing}
             lastAutoSave={lastAutoSave}

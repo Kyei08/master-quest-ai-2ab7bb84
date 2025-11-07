@@ -10,6 +10,9 @@ import { QuizQuestion } from "./quiz/QuizQuestion";
 import { QuizNavigation } from "./quiz/QuizNavigation";
 import { SyncIndicator } from "./SyncIndicator";
 import { ProgressIndicator } from "./ProgressIndicator";
+import { exportQuizToPDF } from "@/lib/pdfExport";
+import { Button } from "@/components/ui/button";
+import { FileDown } from "lucide-react";
 
 interface Question {
   question: string;
@@ -235,6 +238,7 @@ const QuizTab = ({ moduleId, moduleTopic, quizType, onComplete }: QuizTabProps) 
         totalMarks={totalMarks}
         questions={quizData.questions}
         answers={answers}
+        moduleTopic={moduleTopic}
         onTryAgain={() => {
           setQuizData(null);
           setShowResults(false);
@@ -264,7 +268,15 @@ const QuizTab = ({ moduleId, moduleTopic, quizType, onComplete }: QuizTabProps) 
       />
       
       <CardContent className="space-y-6">
-        <div className="flex justify-end items-center mb-4">
+        <div className="flex justify-between items-center mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportQuizToPDF(moduleTopic, quizType, quizData.questions, answers)}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
           <SyncIndicator
             syncing={syncing}
             lastAutoSave={lastAutoSave}
