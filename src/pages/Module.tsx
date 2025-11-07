@@ -12,6 +12,8 @@ import QuizTab from "@/components/module/QuizTab";
 import ResultsTab from "@/components/module/ResultsTab";
 import { DiscussionsTab } from "@/components/module/DiscussionsTab";
 import { ShareModuleDialog } from "@/components/module/ShareModuleDialog";
+import { useModulePresence } from "@/hooks/useModulePresence";
+import { ModulePresence } from "@/components/module/ModulePresence";
 
 interface Module {
   id: string;
@@ -30,6 +32,7 @@ const Module = () => {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [memberCount, setMemberCount] = useState(0);
+  const { presenceUsers, onlineCount } = useModulePresence(id);
 
   useEffect(() => {
     if (id) {
@@ -178,10 +181,13 @@ const Module = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {onlineCount > 0 && (
+                <ModulePresence users={presenceUsers} variant="compact" />
+              )}
               {memberCount > 0 && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground mr-2">
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Users className="w-4 h-4" />
-                  <span className="hidden sm:inline">{memberCount + 1}</span>
+                  <span className="hidden sm:inline">{memberCount + 1} total</span>
                 </div>
               )}
               {isOwner && (

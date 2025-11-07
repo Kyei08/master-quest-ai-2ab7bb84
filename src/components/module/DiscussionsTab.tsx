@@ -19,6 +19,8 @@ import {
 import { DiscussionCard } from "./discussion/DiscussionCard";
 import { NewDiscussionDialog } from "./discussion/NewDiscussionDialog";
 import { DiscussionDetailDialog } from "./discussion/DiscussionDetailDialog";
+import { useModulePresence } from "@/hooks/useModulePresence";
+import { ModulePresence } from "./ModulePresence";
 
 interface Discussion {
   id: string;
@@ -49,6 +51,7 @@ export const DiscussionsTab = ({ moduleId }: DiscussionsTabProps) => {
     null
   );
   const [sortBy, setSortBy] = useState<"hot" | "top" | "new" | "resolved">("hot");
+  const { presenceUsers } = useModulePresence(moduleId);
 
   useEffect(() => {
     loadDiscussions();
@@ -205,82 +208,93 @@ export const DiscussionsTab = ({ moduleId }: DiscussionsTabProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <MessageCircle className="w-6 h-6 text-primary" />
-          <div>
-            <h2 className="text-2xl font-bold">Discussions</h2>
-            <p className="text-sm text-muted-foreground">
-              Ask questions and discuss this module
-            </p>
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <MessageCircle className="w-6 h-6 text-primary" />
+              <div>
+                <h2 className="text-2xl font-bold">Discussions</h2>
+                <p className="text-sm text-muted-foreground">
+                  Ask questions and discuss this module
+                </p>
+              </div>
+            </div>
+            <Button onClick={() => setNewDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Discussion
+            </Button>
           </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex gap-2">
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <MessageCircle className="w-3 h-3" />
+                {discussions.length} discussions
+              </Badge>
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                {discussions.filter((d) => d.is_resolved).length} resolved
+              </Badge>
+            </div>
+
+            <Tabs value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)} className="w-full sm:w-auto">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="hot" className="flex items-center gap-1 text-xs sm:text-sm">
+                  <TrendingUp className="w-3 h-3" />
+                  <span className="hidden sm:inline">Hot</span>
+                </TabsTrigger>
+                <TabsTrigger value="top" className="flex items-center gap-1 text-xs sm:text-sm">
+                  <Star className="w-3 h-3" />
+                  <span className="hidden sm:inline">Top</span>
+                </TabsTrigger>
+                <TabsTrigger value="new" className="flex items-center gap-1 text-xs sm:text-sm">
+                  <Calendar className="w-3 h-3" />
+                  <span className="hidden sm:inline">New</span>
+                </TabsTrigger>
+                <TabsTrigger value="resolved" className="flex items-center gap-1 text-xs sm:text-sm">
+                  <CheckCircle className="w-3 h-3" />
+                  <span className="hidden sm:inline">Solved</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          <Separator />
+
+          {discussions.length === 0 ? (
+            <Card className="p-12 text-center">
+              <MessageCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-lg font-semibold mb-2">No discussions yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Be the first to start a discussion about this module
+              </p>
+              <Button onClick={() => setNewDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Start Discussion
+              </Button>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {getSortedDiscussions().map((discussion) => (
+                <DiscussionCard
+                  key={discussion.id}
+                  discussion={discussion}
+                  onUpvote={handleUpvote}
+                  onClick={() => setSelectedDiscussion(discussion.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
-        <Button onClick={() => setNewDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Discussion
-        </Button>
+
+        {/* Sidebar with presence */}
+        <div className="lg:w-64 space-y-4">
+          <Card className="p-4">
+            <ModulePresence users={presenceUsers} variant="full" />
+          </Card>
+        </div>
       </div>
-
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex gap-2">
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <MessageCircle className="w-3 h-3" />
-            {discussions.length} discussions
-          </Badge>
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <CheckCircle className="w-3 h-3" />
-            {discussions.filter((d) => d.is_resolved).length} resolved
-          </Badge>
-        </div>
-
-        <Tabs value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)} className="w-full sm:w-auto">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="hot" className="flex items-center gap-1 text-xs sm:text-sm">
-              <TrendingUp className="w-3 h-3" />
-              <span className="hidden sm:inline">Hot</span>
-            </TabsTrigger>
-            <TabsTrigger value="top" className="flex items-center gap-1 text-xs sm:text-sm">
-              <Star className="w-3 h-3" />
-              <span className="hidden sm:inline">Top</span>
-            </TabsTrigger>
-            <TabsTrigger value="new" className="flex items-center gap-1 text-xs sm:text-sm">
-              <Calendar className="w-3 h-3" />
-              <span className="hidden sm:inline">New</span>
-            </TabsTrigger>
-            <TabsTrigger value="resolved" className="flex items-center gap-1 text-xs sm:text-sm">
-              <CheckCircle className="w-3 h-3" />
-              <span className="hidden sm:inline">Solved</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      <Separator />
-
-      {discussions.length === 0 ? (
-        <Card className="p-12 text-center">
-          <MessageCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <h3 className="text-lg font-semibold mb-2">No discussions yet</h3>
-          <p className="text-muted-foreground mb-4">
-            Be the first to start a discussion about this module
-          </p>
-          <Button onClick={() => setNewDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Start Discussion
-          </Button>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {getSortedDiscussions().map((discussion) => (
-            <DiscussionCard
-              key={discussion.id}
-              discussion={discussion}
-              onUpvote={handleUpvote}
-              onClick={() => setSelectedDiscussion(discussion.id)}
-            />
-          ))}
-        </div>
-      )}
 
       <NewDiscussionDialog
         open={newDialogOpen}
