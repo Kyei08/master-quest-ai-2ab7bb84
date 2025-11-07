@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useSyncQueue } from "@/hooks/useSyncQueue";
 import { SyncIndicator } from "./SyncIndicator";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useBatchSyncContext } from "@/contexts/BatchSyncContext";
 
 interface PresentationsTabProps {
   moduleId: string;
@@ -45,6 +46,27 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
   const [syncing, setSyncing] = useState(false);
   const { addToQueue, queueSize, getNextRetryTime, processQueue } = useSyncQueue();
   const isOnline = useOnlineStatus();
+  const batchSync = useBatchSyncContext();
+
+  // Register with batch sync
+  useEffect(() => {
+    const key = `presentations-${moduleId}`;
+    batchSync.register(key, {
+      draftType: "presentations",
+      getData: () => ({
+        presentations,
+        currentPresentationId,
+        currentSlide,
+        slides,
+        editedTitle,
+        editedContent,
+        isEditing,
+        isCreating
+      })
+    });
+
+    return () => batchSync.unregister(key);
+  }, [moduleId, presentations, currentPresentationId, currentSlide, slides, editedTitle, editedContent, isEditing, isCreating]);
 
   useEffect(() => {
     loadPresentations();

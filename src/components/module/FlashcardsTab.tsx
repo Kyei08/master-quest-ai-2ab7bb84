@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useSyncQueue } from "@/hooks/useSyncQueue";
 import { SyncIndicator } from "./SyncIndicator";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useBatchSyncContext } from "@/contexts/BatchSyncContext";
 
 interface FlashcardsTabProps {
   moduleId: string;
@@ -36,6 +37,25 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
   const [syncing, setSyncing] = useState(false);
   const { addToQueue, queueSize, getNextRetryTime, processQueue } = useSyncQueue();
   const isOnline = useOnlineStatus();
+  const batchSync = useBatchSyncContext();
+
+  // Register with batch sync
+  useEffect(() => {
+    const key = `flashcards-${moduleId}`;
+    batchSync.register(key, {
+      draftType: "flashcards",
+      getData: () => ({
+        flashcards,
+        currentIndex,
+        editedQuestion,
+        editedAnswer,
+        isEditing,
+        isCreating
+      })
+    });
+
+    return () => batchSync.unregister(key);
+  }, [moduleId, flashcards, currentIndex, editedQuestion, editedAnswer, isEditing, isCreating]);
 
   useEffect(() => {
     loadFlashcards();

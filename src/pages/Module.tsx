@@ -16,6 +16,8 @@ import PresentationsTab from "@/components/module/PresentationsTab";
 import { ShareModuleDialog } from "@/components/module/ShareModuleDialog";
 import { useModulePresence } from "@/hooks/useModulePresence";
 import { ModulePresence } from "@/components/module/ModulePresence";
+import { BatchSyncProvider, useBatchSyncContext } from "@/contexts/BatchSyncContext";
+import { BatchSyncIndicator } from "@/components/module/BatchSyncIndicator";
 
 interface Module {
   id: string;
@@ -280,73 +282,15 @@ const Module = () => {
       </div>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-7 mb-8 h-auto gap-1 p-1">
-            <TabsTrigger value="resources" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-              <BookOpen className="w-4 h-4 sm:mr-0" />
-              <span className="text-xs sm:text-sm">Resources</span>
-            </TabsTrigger>
-            <TabsTrigger value="flashcards" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-              <CreditCard className="w-4 h-4 sm:mr-0" />
-              <span className="text-xs sm:text-sm">Flashcards</span>
-            </TabsTrigger>
-            <TabsTrigger value="presentations" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-              <Presentation className="w-4 h-4 sm:mr-0" />
-              <span className="text-xs sm:text-sm hidden sm:inline">Presentations</span>
-              <span className="text-xs sm:hidden">Slides</span>
-            </TabsTrigger>
-            <TabsTrigger value="assignment" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-              <FileText className="w-4 h-4 sm:mr-0" />
-              <span className="text-xs sm:text-sm">Assignment</span>
-            </TabsTrigger>
-            <TabsTrigger value="quiz" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-              <Sparkles className="w-4 h-4 sm:mr-0" />
-              <span className="text-xs sm:text-sm hidden sm:inline">Practice Quiz</span>
-              <span className="text-xs sm:hidden">Quiz</span>
-            </TabsTrigger>
-            <TabsTrigger value="final-test" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-              <GraduationCap className="w-4 h-4 sm:mr-0" />
-              <span className="text-xs sm:text-sm hidden sm:inline">Final Test</span>
-              <span className="text-xs sm:hidden">Test</span>
-            </TabsTrigger>
-            <TabsTrigger value="results" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-              <GraduationCap className="w-4 h-4 sm:mr-0" />
-              <span className="text-xs sm:text-sm">Results</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="resources">
-            <ResourcesTab moduleId={id!} moduleTopic={module.topic} />
-          </TabsContent>
-
-          <TabsContent value="flashcards">
-            <FlashcardsTab moduleId={id!} moduleTopic={module.topic} />
-          </TabsContent>
-
-          <TabsContent value="presentations">
-            <PresentationsTab moduleId={id!} moduleTopic={module.topic} />
-          </TabsContent>
-
-          <TabsContent value="assignment">
-            <AssignmentTab moduleId={id!} moduleTopic={module.topic} />
-          </TabsContent>
-
-          <TabsContent value="discussions">
-            <DiscussionsTab moduleId={id!} />
-          </TabsContent>
-
-          <TabsContent value="quiz">
-            <QuizTab moduleId={id!} moduleTopic={module.topic} quizType="quiz" onComplete={() => setActiveTab("results")} />
-          </TabsContent>
-
-          <TabsContent value="final-test">
-            <QuizTab moduleId={id!} moduleTopic={module.topic} quizType="final_test" onComplete={() => setActiveTab("results")} />
-          </TabsContent>
-
-          <TabsContent value="results">
-            <ResultsTab moduleId={id!} module={module} onReload={loadModule} />
-          </TabsContent>
-        </Tabs>
+        <BatchSyncProvider moduleId={id!}>
+          <ModuleContent 
+            module={module} 
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            id={id!}
+            loadModule={loadModule}
+          />
+        </BatchSyncProvider>
       </main>
 
       {isOwner && (
@@ -358,6 +302,104 @@ const Module = () => {
         />
       )}
     </div>
+  );
+};
+
+// Separate component to use batch sync context
+const ModuleContent = ({ 
+  module, 
+  activeTab, 
+  setActiveTab, 
+  id,
+  loadModule
+}: { 
+  module: Module; 
+  activeTab: string; 
+  setActiveTab: (tab: string) => void;
+  id: string;
+  loadModule: () => void;
+}) => {
+  const { syncing, lastBatchSync, syncAll, queueSize, nextRetryTime, registeredCount } = useBatchSyncContext();
+
+  return (
+    <>
+      <BatchSyncIndicator
+        syncing={syncing}
+        lastBatchSync={lastBatchSync}
+        onSyncAll={syncAll}
+        queueSize={queueSize}
+        nextRetryTime={nextRetryTime}
+        registeredCount={registeredCount}
+      />
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+        <TabsList className="grid w-full grid-cols-7 mb-8 h-auto gap-1 p-1">
+          <TabsTrigger value="resources" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+            <BookOpen className="w-4 h-4 sm:mr-0" />
+            <span className="text-xs sm:text-sm">Resources</span>
+          </TabsTrigger>
+          <TabsTrigger value="flashcards" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+            <CreditCard className="w-4 h-4 sm:mr-0" />
+            <span className="text-xs sm:text-sm">Flashcards</span>
+          </TabsTrigger>
+          <TabsTrigger value="presentations" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+            <Presentation className="w-4 h-4 sm:mr-0" />
+            <span className="text-xs sm:text-sm hidden sm:inline">Presentations</span>
+            <span className="text-xs sm:hidden">Slides</span>
+          </TabsTrigger>
+          <TabsTrigger value="assignment" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+            <FileText className="w-4 h-4 sm:mr-0" />
+            <span className="text-xs sm:text-sm">Assignment</span>
+          </TabsTrigger>
+          <TabsTrigger value="quiz" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+            <Sparkles className="w-4 h-4 sm:mr-0" />
+            <span className="text-xs sm:text-sm hidden sm:inline">Practice Quiz</span>
+            <span className="text-xs sm:hidden">Quiz</span>
+          </TabsTrigger>
+          <TabsTrigger value="final-test" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+            <GraduationCap className="w-4 h-4 sm:mr-0" />
+            <span className="text-xs sm:text-sm hidden sm:inline">Final Test</span>
+            <span className="text-xs sm:hidden">Test</span>
+          </TabsTrigger>
+          <TabsTrigger value="results" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
+            <GraduationCap className="w-4 h-4 sm:mr-0" />
+            <span className="text-xs sm:text-sm">Results</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="resources">
+          <ResourcesTab moduleId={id!} moduleTopic={module.topic} />
+        </TabsContent>
+
+        <TabsContent value="flashcards">
+          <FlashcardsTab moduleId={id!} moduleTopic={module.topic} />
+        </TabsContent>
+
+        <TabsContent value="presentations">
+          <PresentationsTab moduleId={id!} moduleTopic={module.topic} />
+        </TabsContent>
+
+        <TabsContent value="assignment">
+          <AssignmentTab moduleId={id!} moduleTopic={module.topic} />
+        </TabsContent>
+
+        <TabsContent value="discussions">
+          <DiscussionsTab moduleId={id!} />
+        </TabsContent>
+
+        <TabsContent value="quiz">
+          <QuizTab moduleId={id!} moduleTopic={module.topic} quizType="quiz" onComplete={() => setActiveTab("results")} />
+        </TabsContent>
+
+        <TabsContent value="final-test">
+          <QuizTab moduleId={id!} moduleTopic={module.topic} quizType="final_test" onComplete={() => setActiveTab("results")} />
+        </TabsContent>
+
+        <TabsContent value="results">
+          <ResultsTab moduleId={id!} module={module} onReload={loadModule} />
+        </TabsContent>
+      </Tabs>
+    </>
   );
 };
 
