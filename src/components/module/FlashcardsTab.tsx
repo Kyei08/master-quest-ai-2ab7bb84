@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, RotateCw, Sparkles } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ChevronLeft, ChevronRight, RotateCw, Sparkles, Edit2, Save, X, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -20,6 +21,9 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedQuestion, setEditedQuestion] = useState("");
+  const [editedAnswer, setEditedAnswer] = useState("");
 
   useEffect(() => {
     loadFlashcards();
@@ -66,7 +70,44 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
 
   const prevCard = () => {
     setFlipped(false);
+    setIsEditing(false);
     setCurrentIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length);
+  };
+
+  const startEditing = () => {
+    const current = flashcards[currentIndex];
+    setEditedQuestion(current.question);
+    setEditedAnswer(current.answer);
+    setIsEditing(true);
+    setFlipped(false);
+  };
+
+  const saveEdit = () => {
+    const updated = [...flashcards];
+    updated[currentIndex] = {
+      question: editedQuestion,
+      answer: editedAnswer
+    };
+    setFlashcards(updated);
+    localStorage.setItem(`flashcards:${moduleId}`, JSON.stringify(updated));
+    setIsEditing(false);
+    toast.success("Flashcard updated!");
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  const deleteCard = () => {
+    const updated = flashcards.filter((_, idx) => idx !== currentIndex);
+    setFlashcards(updated);
+    localStorage.setItem(`flashcards:${moduleId}`, JSON.stringify(updated));
+    
+    if (currentIndex >= updated.length && updated.length > 0) {
+      setCurrentIndex(updated.length - 1);
+    }
+    
+    toast.success("Flashcard deleted!");
   };
 
   if (flashcards.length === 0) {
@@ -105,30 +146,84 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
             Card {currentIndex + 1} of {flashcards.length}
           </p>
         </div>
-        <Button onClick={generateFlashcards} disabled={loading} variant="outline">
-          <RotateCw className="w-4 h-4 mr-2" />
-          Regenerate
-        </Button>
+        <div className="flex gap-2">
+          {isEditing ? (
+            <>
+              <Button onClick={saveEdit} size="sm">
+                <Save className="w-4 h-4 mr-2" />
+                Save
+              </Button>
+              <Button onClick={cancelEdit} size="sm" variant="outline">
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={startEditing} size="sm" variant="outline">
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+              <Button onClick={deleteCard} size="sm" variant="outline">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+              <Button onClick={generateFlashcards} disabled={loading} variant="outline">
+                <RotateCw className="w-4 h-4 mr-2" />
+                Regenerate
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
-      <Card 
-        className="shadow-card-custom cursor-pointer min-h-[400px] flex items-center justify-center"
-        onClick={() => setFlipped(!flipped)}
-      >
-        <CardContent className="p-8 text-center">
-          <div className="mb-4">
-            <span className="text-xs font-semibold text-primary uppercase tracking-wide">
-              {flipped ? "Answer" : "Question"}
-            </span>
-          </div>
-          <p className="text-xl font-medium">
-            {flipped ? currentCard.answer : currentCard.question}
-          </p>
-          <p className="text-sm text-muted-foreground mt-6">
-            Click card to flip
-          </p>
-        </CardContent>
-      </Card>
+      {isEditing ? (
+        <Card className="shadow-card-custom min-h-[400px]">
+          <CardContent className="p-8 space-y-6">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-primary uppercase tracking-wide">
+                Question
+              </label>
+              <Textarea
+                value={editedQuestion}
+                onChange={(e) => setEditedQuestion(e.target.value)}
+                className="min-h-[120px] text-lg"
+                placeholder="Enter the question..."
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-primary uppercase tracking-wide">
+                Answer
+              </label>
+              <Textarea
+                value={editedAnswer}
+                onChange={(e) => setEditedAnswer(e.target.value)}
+                className="min-h-[120px] text-lg"
+                placeholder="Enter the answer..."
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card 
+          className="shadow-card-custom cursor-pointer min-h-[400px] flex items-center justify-center"
+          onClick={() => setFlipped(!flipped)}
+        >
+          <CardContent className="p-8 text-center">
+            <div className="mb-4">
+              <span className="text-xs font-semibold text-primary uppercase tracking-wide">
+                {flipped ? "Answer" : "Question"}
+              </span>
+            </div>
+            <p className="text-xl font-medium">
+              {flipped ? currentCard.answer : currentCard.question}
+            </p>
+            <p className="text-sm text-muted-foreground mt-6">
+              Click card to flip
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex items-center justify-center gap-4">
         <Button
