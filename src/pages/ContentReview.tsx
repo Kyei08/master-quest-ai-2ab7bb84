@@ -8,12 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Star, CheckCircle, Flag, Clock, MessageSquare, ThumbsUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { QualityRatingDisplay } from "@/components/quality/QualityRatingDisplay";
+import { QualityMetricsCard } from "@/components/quality/QualityMetricsCard";
 
 interface ContentItem {
   id: string;
   module_id: string;
   content: any;
   content_status: "approved" | "draft" | "flagged" | "pending_review";
+  average_rating?: number | null;
+  total_ratings?: number;
   created_at: string;
   reviewed_at?: string;
   reviewed_by?: string;
@@ -38,10 +42,21 @@ const ContentReview = () => {
   const [rating, setRating] = useState(0);
   const [filterStatus, setFilterStatus] = useState<"approved" | "draft" | "flagged" | "pending_review" | "all">("pending_review");
   const [isInstructor, setIsInstructor] = useState(false);
+  const [qualityMetrics, setQualityMetrics] = useState({
+    total: 0,
+    averageRating: 0,
+    excellent: 0,
+    good: 0,
+    fair: 0,
+    poor: 0,
+    flagged: 0,
+    approved: 0,
+  });
 
   useEffect(() => {
     checkRole();
     loadContent();
+    loadQualityMetrics();
   }, [filterStatus]);
 
   const checkRole = async () => {
@@ -123,6 +138,53 @@ const ContentReview = () => {
     }
   };
 
+  const loadQualityMetrics = async () => {
+    try {
+      const { data: allAssignments } = await supabase
+        .from("assignments")
+        .select("content_status, average_rating, total_ratings");
+
+      if (!allAssignments) return;
+
+      const metrics = {
+        total: allAssignments.length,
+        averageRating: 0,
+        excellent: 0,
+        good: 0,
+        fair: 0,
+        poor: 0,
+        flagged: allAssignments.filter((a) => a.content_status === "flagged").length,
+        approved: allAssignments.filter((a) => a.content_status === "approved").length,
+      };
+
+      // Calculate average rating and distribution
+      const ratedAssignments = allAssignments.filter(
+        (a) => a.average_rating && a.total_ratings && a.total_ratings > 0
+      );
+
+      if (ratedAssignments.length > 0) {
+        const totalRating = ratedAssignments.reduce(
+          (sum, a) => sum + (a.average_rating || 0),
+          0
+        );
+        metrics.averageRating = totalRating / ratedAssignments.length;
+
+        // Categorize by rating
+        ratedAssignments.forEach((a) => {
+          const rating = a.average_rating || 0;
+          if (rating >= 4.5) metrics.excellent++;
+          else if (rating >= 3.5) metrics.good++;
+          else if (rating >= 2.5) metrics.fair++;
+          else metrics.poor++;
+        });
+      }
+
+      setQualityMetrics(metrics);
+    } catch (error) {
+      console.error("Error loading quality metrics:", error);
+    }
+  };
+
   const handleReview = async (
     contentId: string,
     status: "approved" | "draft" | "flagged" | "pending_review",
@@ -167,6 +229,7 @@ const ContentReview = () => {
       setRating(0);
       setSelectedContent(null);
       loadContent();
+      loadQualityMetrics();
     } catch (error: any) {
       console.error("Error reviewing content:", error);
       toast.error("Failed to submit review");
@@ -228,7 +291,12 @@ const ContentReview = () => {
       </div>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs 
+        {/* Quality Metrics Overview */}
+        <div className="mb-6">
+          <QualityMetricsCard metrics={qualityMetrics} />
+        </div>
+
+        <Tabs
           value={filterStatus} 
           onValueChange={(value) => setFilterStatus(value as typeof filterStatus)} 
           className="mb-6"
@@ -280,11 +348,38 @@ const ContentReview = () => {
                         })}
                       </CardDescription>
                     </div>
-                    {getStatusBadge(assignment.content_status)}
+                    <div className="flex flex-col items-end gap-2">
+                      {getStatusBadge(assignment.content_status)}
+                      {assignment.average_rating && assignment.total_ratings ? (
+                        <QualityRatingDisplay
+                          averageRating={assignment.average_rating}
+                          totalRatings={assignment.total_ratings}
+                          size="sm"
+                          showLabel={false}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 </CardHeader>
 
                 <CardContent className="space-y-4">
+                  {/* Low quality warning */}
+                  {assignment.content_status === "flagged" && 
+                   assignment.average_rating && 
+                   assignment.average_rating < 2.5 && (
+                    <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <Flag className="w-4 h-4 text-red-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-red-600">
+                          Auto-Flagged: Low Quality Rating
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          This content has been automatically flagged due to an average rating below 2.5
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Show assignment questions */}
                   <div className="bg-accent/30 p-4 rounded-lg">
                     <h4 className="font-semibold mb-3">Questions Preview:</h4>
