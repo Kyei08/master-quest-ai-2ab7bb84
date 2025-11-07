@@ -229,7 +229,7 @@ export const DiscussionsTab = ({ moduleId }: DiscussionsTabProps) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1 space-y-6">
           <div className="flex items-center justify-between">
@@ -298,13 +298,18 @@ export const DiscussionsTab = ({ moduleId }: DiscussionsTabProps) => {
             </Card>
           ) : (
             <div className="space-y-4">
-              {getSortedDiscussions().map((discussion) => (
-                <DiscussionCard
+              {getSortedDiscussions().map((discussion, index) => (
+                <div
                   key={discussion.id}
-                  discussion={discussion}
-                  onUpvote={handleUpvote}
-                  onClick={() => setSelectedDiscussion(discussion.id)}
-                />
+                  className="animate-scale-in"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <DiscussionCard
+                    discussion={discussion}
+                    onUpvote={handleUpvote}
+                    onClick={() => setSelectedDiscussion(discussion.id)}
+                  />
+                </div>
               ))}
             </div>
           )}

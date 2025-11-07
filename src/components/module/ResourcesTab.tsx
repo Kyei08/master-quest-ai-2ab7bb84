@@ -152,8 +152,8 @@ const ResourcesTab = ({ moduleId, moduleTopic }: ResourcesTabProps) => {
   }
 
   return (
-    <div className="space-y-8">
-      <Card className="shadow-card-custom">
+    <div className="space-y-8 animate-fade-in">
+      <Card className="shadow-card-custom animate-scale-in">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -206,7 +206,7 @@ const ResourcesTab = ({ moduleId, moduleTopic }: ResourcesTabProps) => {
         </CardContent>
       </Card>
 
-      <Card className="shadow-card-custom">
+      <Card className="shadow-card-custom animate-scale-in" style={{ animationDelay: '0.1s' }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-secondary" />

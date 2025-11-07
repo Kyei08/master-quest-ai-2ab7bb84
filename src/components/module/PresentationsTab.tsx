@@ -432,7 +432,7 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className="text-lg font-semibold">Presentation</h3>
@@ -500,7 +500,7 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
       </div>
 
       {isEditing || isCreating ? (
-        <Card className="shadow-card-custom min-h-[500px]">
+        <Card className="shadow-card-custom min-h-[500px] animate-scale-in">
           <CardContent className="p-12 space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-primary uppercase tracking-wide">
@@ -527,7 +527,7 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
           </CardContent>
         </Card>
       ) : (
-        <Card className="shadow-card-custom min-h-[500px] bg-gradient-to-br from-background to-muted/20">
+        <Card className="shadow-card-custom min-h-[500px] bg-gradient-to-br from-background to-muted/20 animate-scale-in">
           <CardContent className="p-12">
             <div className="space-y-8">
               <h2 className="text-4xl font-bold">{slides[currentSlide]?.title}</h2>

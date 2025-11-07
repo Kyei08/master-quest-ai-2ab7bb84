@@ -295,7 +295,7 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
   }
 
   return (
-    <Card className="shadow-card-custom animate-fade-in">
+    <Card className="shadow-card-custom animate-fade-in animate-scale-in">
       <AssignmentHeader
         moduleTopic={moduleTopic}
         title={assignment.content.title}

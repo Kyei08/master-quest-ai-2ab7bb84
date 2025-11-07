@@ -312,7 +312,7 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className="text-lg font-semibold">Flashcards</h3>
@@ -376,7 +376,7 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
       </div>
 
       {isEditing || isCreating ? (
-        <Card className="shadow-card-custom min-h-[400px]">
+        <Card className="shadow-card-custom min-h-[400px] animate-scale-in">
           <CardContent className="p-8 space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-primary uppercase tracking-wide">
@@ -404,7 +404,7 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
         </Card>
       ) : (
         <Card 
-          className="shadow-card-custom cursor-pointer min-h-[400px] flex items-center justify-center"
+          className="shadow-card-custom cursor-pointer min-h-[400px] flex items-center justify-center animate-scale-in"
           onClick={() => setFlipped(!flipped)}
         >
           <CardContent className="p-8 text-center">
