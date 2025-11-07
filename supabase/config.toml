@@ -45,6 +45,12 @@ verify_jwt = false
 [functions.generate-quiz]
 verify_jwt = false
 
+[functions.generate-flashcards]
+verify_jwt = false
+
+[functions.generate-presentations]
+verify_jwt = false
+
 # Database settings
 [db]
 major_version = 15

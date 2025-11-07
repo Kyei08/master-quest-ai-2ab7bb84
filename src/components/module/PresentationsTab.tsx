@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Presentation, Download, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface PresentationsTabProps {
@@ -33,27 +34,24 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
   const generatePresentation = async () => {
     setLoading(true);
     try {
-      // This would call an edge function to generate presentation
-      const sampleSlides: Slide[] = [
-        {
-          title: `Introduction to ${moduleTopic}`,
-          content: `Welcome to this comprehensive overview of ${moduleTopic}. In this presentation, we'll explore the key concepts and practical applications.`
-        },
-        {
-          title: "Key Concepts",
-          content: "• Understanding the fundamentals\n• Core principles and theories\n• Real-world applications\n• Best practices"
-        },
-        {
-          title: "Summary",
-          content: `Now you have a better understanding of ${moduleTopic}. Continue exploring the resources and complete the assignments to master this topic.`
-        }
-      ];
+      const { data, error } = await supabase.functions.invoke('generate-presentations', {
+        body: { topic: moduleTopic }
+      });
 
-      setSlides(sampleSlides);
-      localStorage.setItem(`presentation:${moduleId}`, JSON.stringify(sampleSlides));
+      if (error) throw error;
+      
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      const slides = data.slides || [];
+      setSlides(slides);
+      localStorage.setItem(`presentation:${moduleId}`, JSON.stringify(slides));
       toast.success("Presentation generated!");
-    } catch (error) {
-      toast.error("Failed to generate presentation");
+    } catch (error: any) {
+      console.error('Error generating presentation:', error);
+      toast.error(error.message || "Failed to generate presentation");
     } finally {
       setLoading(false);
     }

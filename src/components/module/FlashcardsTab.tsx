@@ -36,24 +36,24 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
   const generateFlashcards = async () => {
     setLoading(true);
     try {
-      // This would call an edge function to generate flashcards
-      // For now, we'll create sample ones
-      const sampleCards: Flashcard[] = [
-        {
-          question: `What is ${moduleTopic}?`,
-          answer: `${moduleTopic} is a key concept that requires understanding of its fundamental principles and applications.`
-        },
-        {
-          question: `Why is ${moduleTopic} important?`,
-          answer: `Understanding ${moduleTopic} is crucial for building a strong foundation in this subject area.`
-        }
-      ];
+      const { data, error } = await supabase.functions.invoke('generate-flashcards', {
+        body: { topic: moduleTopic }
+      });
+
+      if (error) throw error;
       
-      setFlashcards(sampleCards);
-      localStorage.setItem(`flashcards:${moduleId}`, JSON.stringify(sampleCards));
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      const flashcards = data.flashcards || [];
+      setFlashcards(flashcards);
+      localStorage.setItem(`flashcards:${moduleId}`, JSON.stringify(flashcards));
       toast.success("Flashcards generated!");
     } catch (error: any) {
-      toast.error("Failed to generate flashcards");
+      console.error('Error generating flashcards:', error);
+      toast.error(error.message || "Failed to generate flashcards");
     } finally {
       setLoading(false);
     }
