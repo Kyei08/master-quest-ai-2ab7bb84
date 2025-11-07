@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, BookOpen, GraduationCap, LogOut, Sparkles } from "lucide-react";
+import { Home, BookOpen, GraduationCap, LogOut, Sparkles, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
@@ -24,6 +24,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isInstructor, setIsInstructor] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [modules, setModules] = useState<Array<{ id: string; topic: string }>>([]);
   const collapsed = state === "collapsed";
 
@@ -42,6 +43,7 @@ export function AppSidebar() {
       .eq("user_id", user.id);
 
     setIsInstructor(roles?.some(r => r.role === "instructor" || r.role === "admin") || false);
+    setIsAdmin(roles?.some(r => r.role === "admin") || false);
   };
 
   const loadModules = async () => {
@@ -63,6 +65,7 @@ export function AppSidebar() {
   const mainItems = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
     ...(isInstructor ? [{ title: "Grading", url: "/grading", icon: GraduationCap }] : []),
+    ...(isAdmin ? [{ title: "Admin", url: "/admin", icon: Shield }] : []),
   ];
 
   const getNavCls = (isActive: boolean) =>
