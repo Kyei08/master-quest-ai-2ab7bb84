@@ -47,55 +47,80 @@ const QuizTab = ({ moduleId, moduleTopic, quizType, onComplete }: QuizTabProps) 
   const [totalMarks, setTotalMarks] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
-  // Persist quiz state locally so it survives navigation away from the module
   const storageKey = `quizState:${moduleId}:${quizType}`;
 
   useEffect(() => {
-    const raw = localStorage.getItem(storageKey);
-    if (raw) {
-      try {
-        const saved = JSON.parse(raw);
+    loadCloudDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  // Load cloud-saved draft
+  const loadCloudDraft = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("module_progress_drafts")
+        .select("*")
+        .eq("module_id", moduleId)
+        .eq("draft_type", "quiz")
+        .eq("quiz_type", quizType)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data?.data) {
+        const saved = data.data as any;
         if (saved.quizData) setQuizData(saved.quizData);
         if (saved.answers) setAnswers(saved.answers);
         setShowResults(!!saved.showResults);
         setScore(saved.score || 0);
         setTotalMarks(saved.totalMarks || 0);
         setCurrentQuestionIndex(saved.currentQuestionIndex || 0);
-      } catch (e) {
-        console.error("Failed to load saved quiz state", e);
+        setLastAutoSave(new Date(data.updated_at));
       }
+    } catch (e) {
+      console.error("Failed to load cloud draft", e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey]);
+  };
 
-  useEffect(() => {
+  // Manual sync to cloud
+  const syncToCloud = async () => {
     if (!quizData) return;
+    setSyncing(true);
     try {
       const payload = { quizData, answers, showResults, score, totalMarks, currentQuestionIndex };
-      localStorage.setItem(storageKey, JSON.stringify(payload));
-    } catch (e) {
-      // ignore write errors
-    }
-  }, [quizData, answers, showResults, score, totalMarks, currentQuestionIndex, storageKey]);
+      const { error } = await supabase
+        .from("module_progress_drafts")
+        .upsert([{
+          module_id: moduleId,
+          draft_type: "quiz",
+          quiz_type: quizType,
+          data: payload as any,
+        }]);
 
-  // Auto-save every 30 seconds
+      if (error) throw error;
+
+      setLastAutoSave(new Date());
+      toast.success("✅ Progress synced to cloud", { duration: 3000 });
+      localStorage.setItem(storageKey, JSON.stringify(payload));
+    } catch (err: any) {
+      console.error("Cloud sync failed", err);
+      toast.error("Failed to sync. Check your connection.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Auto-save to cloud every 60 seconds
   useEffect(() => {
     if (!quizData || showResults) return;
 
     const autoSaveInterval = setInterval(() => {
-      try {
-        const payload = { quizData, answers, showResults, score, totalMarks, currentQuestionIndex };
-        localStorage.setItem(storageKey, JSON.stringify(payload));
-        setLastAutoSave(new Date());
-        toast.success("Progress auto-saved", { duration: 2000 });
-      } catch (e) {
-        console.error("Auto-save failed", e);
-      }
-    }, 30000); // 30 seconds
+      syncToCloud();
+    }, 60000); // 60 seconds
 
     return () => clearInterval(autoSaveInterval);
-  }, [quizData, answers, showResults, score, totalMarks, currentQuestionIndex, storageKey]);
+  }, [quizData, answers, showResults, score, totalMarks, currentQuestionIndex]);
 
   const generateQuiz = async () => {
     setGenerating(true);
@@ -224,11 +249,20 @@ const QuizTab = ({ moduleId, moduleTopic, quizType, onComplete }: QuizTabProps) 
       />
       
       <CardContent className="space-y-6">
-        {lastAutoSave && (
-          <div className="mb-4 text-xs text-muted-foreground text-right animate-fade-in">
-            Last saved: {lastAutoSave.toLocaleTimeString()}
-          </div>
-        )}
+        <div className="flex justify-between items-center mb-4">
+          {lastAutoSave && (
+            <div className="text-xs text-muted-foreground animate-fade-in">
+              Last synced: {lastAutoSave.toLocaleTimeString()}
+            </div>
+          )}
+          <button
+            onClick={syncToCloud}
+            disabled={syncing}
+            className="ml-auto text-xs px-3 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary disabled:opacity-50 transition-colors"
+          >
+            {syncing ? "Syncing..." : "💾 Sync Progress"}
+          </button>
+        </div>
         
         <h3 className="text-lg font-semibold">Your {quizType === "quiz" ? "Quiz" : "Test"} Questions</h3>
         

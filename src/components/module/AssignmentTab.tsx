@@ -49,13 +49,64 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
-  // Persist assignment state locally
   const storageKey = `assignmentState:${moduleId}`;
 
   useEffect(() => {
     loadAssignment();
+    loadCloudDraft();
   }, [moduleId]);
+
+  // Load cloud-saved draft
+  const loadCloudDraft = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("module_progress_drafts")
+        .select("*")
+        .eq("module_id", moduleId)
+        .eq("draft_type", "assignment")
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data?.data) {
+        const draft = data.data as any;
+        if (draft.answers) setAnswers(draft.answers);
+        if (draft.currentSection !== undefined) setCurrentSection(draft.currentSection);
+        if (draft.submitted !== undefined) setSubmitted(draft.submitted);
+        setLastAutoSave(new Date(data.updated_at));
+      }
+    } catch (err) {
+      console.error("Failed to load cloud draft", err);
+    }
+  };
+
+  // Manual sync to cloud
+  const syncToCloud = async () => {
+    if (!assignment) return;
+    setSyncing(true);
+    try {
+      const payload = { answers, currentSection, submitted };
+      const { error } = await supabase
+        .from("module_progress_drafts")
+        .upsert([{
+          module_id: moduleId,
+          draft_type: "assignment",
+          data: payload as any,
+        }]);
+
+      if (error) throw error;
+
+      setLastAutoSave(new Date());
+      toast.success("✅ Progress synced to cloud", { duration: 3000 });
+      localStorage.setItem(storageKey, JSON.stringify(payload));
+    } catch (err: any) {
+      console.error("Cloud sync failed", err);
+      toast.error("Failed to sync. Check your connection.");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Load saved state from localStorage
   useEffect(() => {
@@ -84,23 +135,16 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
     }
   }, [answers, currentSection, submitted, assignment, storageKey]);
 
-  // Auto-save every 30 seconds
+  // Auto-save to cloud every 60 seconds
   useEffect(() => {
     if (!assignment || submitted) return;
 
     const autoSaveInterval = setInterval(() => {
-      try {
-        const payload = { answers, currentSection, submitted };
-        localStorage.setItem(storageKey, JSON.stringify(payload));
-        setLastAutoSave(new Date());
-        toast.success("Progress auto-saved", { duration: 2000 });
-      } catch (e) {
-        console.error("Auto-save failed", e);
-      }
-    }, 30000); // 30 seconds
+      syncToCloud();
+    }, 60000); // 60 seconds
 
     return () => clearInterval(autoSaveInterval);
-  }, [assignment, answers, currentSection, submitted, storageKey]);
+  }, [assignment, answers, currentSection, submitted]);
 
   const loadAssignment = async () => {
     const { data, error } = await supabase
@@ -218,11 +262,20 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
       />
       
       <CardContent className="p-4 sm:p-6">
-        {lastAutoSave && (
-          <div className="mb-4 text-xs text-muted-foreground text-right animate-fade-in">
-            Last saved: {lastAutoSave.toLocaleTimeString()}
-          </div>
-        )}
+        <div className="flex justify-between items-center mb-4">
+          {lastAutoSave && (
+            <div className="text-xs text-muted-foreground animate-fade-in">
+              Last synced: {lastAutoSave.toLocaleTimeString()}
+            </div>
+          )}
+          <button
+            onClick={syncToCloud}
+            disabled={syncing}
+            className="ml-auto text-xs px-3 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary disabled:opacity-50 transition-colors"
+          >
+            {syncing ? "Syncing..." : "💾 Sync Progress"}
+          </button>
+        </div>
         
         <div key={currentSection} className="animate-fade-in">
           <AssignmentSection

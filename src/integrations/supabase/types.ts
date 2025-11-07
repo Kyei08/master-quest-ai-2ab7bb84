@@ -82,6 +82,44 @@ export type Database = {
           },
         ]
       }
+      module_progress_drafts: {
+        Row: {
+          created_at: string
+          data: Json
+          draft_type: string
+          id: string
+          module_id: string
+          quiz_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          draft_type: string
+          id?: string
+          module_id: string
+          quiz_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          draft_type?: string
+          id?: string
+          module_id?: string
+          quiz_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_progress_drafts_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modules: {
         Row: {
           created_at: string | null
