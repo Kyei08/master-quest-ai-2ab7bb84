@@ -7,6 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Presentation, Download, Sparkles, Edit2, Save, X, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useSyncQueue } from "@/hooks/useSyncQueue";
+import { SyncIndicator } from "./SyncIndicator";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 interface PresentationsTabProps {
   moduleId: string;
@@ -38,6 +41,10 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
   const [isCreating, setIsCreating] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
   const [editedContent, setEditedContent] = useState("");
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const { addToQueue, queueSize, getNextRetryTime, processQueue } = useSyncQueue();
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     loadPresentations();
@@ -82,6 +89,14 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
       supabase.removeChannel(slidesChannel);
     };
   }, [moduleId, currentPresentationId]);
+
+  // Auto-retry sync when coming back online
+  useEffect(() => {
+    if (isOnline && queueSize > 0) {
+      toast.info("Connection restored. Syncing pending changes...");
+      processQueue();
+    }
+  }, [isOnline, queueSize]);
 
   const loadPresentations = async () => {
     setLoadingPresentations(true);
@@ -192,6 +207,49 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
     setIsCreating(true);
   };
 
+  const syncToCloud = async () => {
+    setSyncing(true);
+    
+    const payload = { 
+      presentations,
+      currentPresentationId,
+      slides,
+      currentSlide,
+      editedTitle,
+      editedContent,
+      isEditing,
+      isCreating
+    };
+    
+    try {
+      const { error } = await supabase
+        .from("module_progress_drafts")
+        .upsert([{
+          module_id: moduleId,
+          draft_type: "presentations",
+          data: payload as any,
+        }]);
+
+      if (error) throw error;
+
+      setLastAutoSave(new Date());
+      toast.success("✅ Progress synced to cloud", { duration: 3000 });
+    } catch (err: any) {
+      console.error("Cloud sync failed", err);
+      
+      // Add to queue for retry when online
+      addToQueue({
+        moduleId,
+        draftType: "presentations",
+        data: payload,
+      });
+      
+      toast.error("Offline - sync queued for retry", { duration: 3000 });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const saveEdit = async () => {
     try {
       if (isCreating) {
@@ -258,6 +316,7 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
       
       setIsEditing(false);
       setIsCreating(false);
+      syncToCloud();
     } catch (error: any) {
       toast.error(error.message || "Failed to save slide");
     }
@@ -284,8 +343,36 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
       }
       
       toast.success("Slide deleted!");
+      syncToCloud();
     } catch (error: any) {
       toast.error(error.message || "Failed to delete slide");
+    }
+  };
+
+  const deletePresentation = async () => {
+    if (!currentPresentationId) return;
+    
+    try {
+      // Delete slides first
+      await supabase
+        .from('presentation_slides')
+        .delete()
+        .eq('presentation_id', currentPresentationId);
+      
+      // Then delete presentation
+      const { error } = await supabase
+        .from('presentations')
+        .delete()
+        .eq('id', currentPresentationId);
+      
+      if (error) throw error;
+      
+      setCurrentPresentationId(null);
+      setSlides([]);
+      toast.success("Presentation deleted!");
+      syncToCloud();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete presentation");
     }
   };
 
@@ -346,7 +433,7 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className="text-lg font-semibold">Presentation</h3>
           {!isCreating && (
@@ -355,6 +442,24 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
             </p>
           )}
         </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {!isOnline && (
+            <div className="text-xs text-warning flex items-center gap-1">
+              <span className="w-2 h-2 bg-warning rounded-full animate-pulse" />
+              Offline
+            </div>
+          )}
+          <SyncIndicator
+            syncing={syncing}
+            lastAutoSave={lastAutoSave}
+            onSync={syncToCloud}
+            queueSize={queueSize}
+            nextRetryTime={getNextRetryTime()}
+          />
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-between">
         <div className="flex gap-2">
           {isEditing || isCreating ? (
             <>

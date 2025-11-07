@@ -6,7 +6,7 @@ import { useOnlineStatus } from "./useOnlineStatus";
 interface QueueItem {
   id: string;
   moduleId: string;
-  draftType: "assignment" | "quiz";
+  draftType: "assignment" | "quiz" | "flashcards" | "presentations";
   quizType?: "quiz" | "final_test";
   data: any;
   timestamp: number;

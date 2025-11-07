@@ -6,6 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight, RotateCw, Sparkles, Edit2, Save, X, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useSyncQueue } from "@/hooks/useSyncQueue";
+import { SyncIndicator } from "./SyncIndicator";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 interface FlashcardsTabProps {
   moduleId: string;
@@ -29,6 +32,10 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
   const [isCreating, setIsCreating] = useState(false);
   const [editedQuestion, setEditedQuestion] = useState("");
   const [editedAnswer, setEditedAnswer] = useState("");
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const { addToQueue, queueSize, getNextRetryTime, processQueue } = useSyncQueue();
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     loadFlashcards();
@@ -54,6 +61,14 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
       supabase.removeChannel(channel);
     };
   }, [moduleId]);
+
+  // Auto-retry sync when coming back online
+  useEffect(() => {
+    if (isOnline && queueSize > 0) {
+      toast.info("Connection restored. Syncing pending changes...");
+      processQueue();
+    }
+  }, [isOnline, queueSize]);
 
   const loadFlashcards = async () => {
     setLoadingFlashcards(true);
@@ -138,6 +153,47 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
     setFlipped(false);
   };
 
+  const syncToCloud = async () => {
+    setSyncing(true);
+    
+    const payload = { 
+      flashcards,
+      currentIndex,
+      editedQuestion,
+      editedAnswer,
+      isEditing,
+      isCreating
+    };
+    
+    try {
+      const { error } = await supabase
+        .from("module_progress_drafts")
+        .upsert([{
+          module_id: moduleId,
+          draft_type: "flashcards",
+          data: payload as any,
+        }]);
+
+      if (error) throw error;
+
+      setLastAutoSave(new Date());
+      toast.success("✅ Progress synced to cloud", { duration: 3000 });
+    } catch (err: any) {
+      console.error("Cloud sync failed", err);
+      
+      // Add to queue for retry when online
+      addToQueue({
+        moduleId,
+        draftType: "flashcards",
+        data: payload,
+      });
+      
+      toast.error("Offline - sync queued for retry", { duration: 3000 });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const saveEdit = async () => {
     try {
       const current = flashcards[currentIndex];
@@ -172,6 +228,7 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
       
       setIsEditing(false);
       setIsCreating(false);
+      syncToCloud();
     } catch (error: any) {
       toast.error(error.message || "Failed to save flashcard");
     }
@@ -256,7 +313,7 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className="text-lg font-semibold">Flashcards</h3>
           {!isCreating && (
@@ -265,6 +322,24 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
             </p>
           )}
         </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {!isOnline && (
+            <div className="text-xs text-warning flex items-center gap-1">
+              <span className="w-2 h-2 bg-warning rounded-full animate-pulse" />
+              Offline
+            </div>
+          )}
+          <SyncIndicator
+            syncing={syncing}
+            lastAutoSave={lastAutoSave}
+            onSync={syncToCloud}
+            queueSize={queueSize}
+            nextRetryTime={getNextRetryTime()}
+          />
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-between">
         <div className="flex gap-2">
           {isEditing || isCreating ? (
             <>
