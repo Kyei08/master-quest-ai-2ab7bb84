@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Module from "./pages/Module";
 import Grading from "./pages/Grading";
 import Admin from "./pages/Admin";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/module/:id" element={<AppLayout><Module /></AppLayout>} />
           <Route path="/grading" element={<AppLayout><Grading /></AppLayout>} />
           <Route path="/admin" element={<AppLayout><Admin /></AppLayout>} />
+          <Route path="/profile" element={<AppLayout><Profile /></AppLayout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
