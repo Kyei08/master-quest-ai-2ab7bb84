@@ -328,6 +328,38 @@ export type Database = {
           },
         ]
       }
+      module_members: {
+        Row: {
+          id: string
+          joined_at: string
+          module_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          module_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          module_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_members_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_progress_drafts: {
         Row: {
           created_at: string
@@ -359,6 +391,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "module_progress_drafts_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      module_shares: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          module_id: string
+          share_token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          module_id: string
+          share_token?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          module_id?: string
+          share_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_shares_module_id_fkey"
             columns: ["module_id"]
             isOneToOne: false
             referencedRelation: "modules"
@@ -576,6 +643,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_module_member: {
+        Args: { module_id: string; user_id: string }
         Returns: boolean
       }
     }
