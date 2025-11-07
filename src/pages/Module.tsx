@@ -49,22 +49,28 @@ const Module = () => {
     if (!shareToken) return;
 
     try {
-      const { data: share } = await supabase
+      const { data: share, error: shareError } = await supabase
         .from('module_shares')
         .select('module_id')
         .eq('share_token', shareToken)
         .eq('is_active', true)
         .single();
 
+      if (shareError) throw shareError;
+
       if (!share) {
-        toast.error('Invalid or expired share link');
+        toast.error('Invalid or expired share link', {
+          description: 'This share link is no longer valid.',
+        });
         return;
       }
 
       // Check if already a member
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
-        toast.error('Please sign in to join this module');
+        toast.error('Please sign in to join this module', {
+          description: 'You need to be logged in to access shared modules.',
+        });
         return;
       }
 
@@ -85,7 +91,9 @@ const Module = () => {
           });
 
         if (error) throw error;
-        toast.success('Successfully joined the module!');
+        toast.success('Successfully joined the module!', {
+          description: 'You can now collaborate with other members.',
+        });
         loadMemberCount();
       }
 
@@ -93,41 +101,71 @@ const Module = () => {
       navigate(`/module/${id}`, { replace: true });
     } catch (error) {
       console.error('Error handling share token:', error);
-      toast.error('Failed to join module');
+      toast.error('Failed to join module', {
+        description: 'Unable to process the share link. Please try again.',
+        action: {
+          label: "Retry",
+          onClick: () => handleShareToken(),
+        },
+      });
     }
   };
 
   const loadMemberCount = async () => {
     if (!id) return;
-    const { count } = await supabase
-      .from('module_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('module_id', id);
     
-    setMemberCount(count || 0);
+    try {
+      const { count, error } = await supabase
+        .from('module_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('module_id', id);
+      
+      if (error) throw error;
+      setMemberCount(count || 0);
+    } catch (error) {
+      console.error("Failed to load member count:", error);
+      toast.error("Failed to load member count", {
+        description: "Unable to fetch collaboration data.",
+        action: {
+          label: "Retry",
+          onClick: () => loadMemberCount(),
+        },
+      });
+    }
   };
 
   const loadModule = async () => {
     if (!id) return;
 
-    const { data, error } = await supabase
-      .from("modules")
-      .select("*")
-      .eq("id", id)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("modules")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-    if (error) {
-      toast.error("Failed to load module");
-      navigate("/dashboard");
-      return;
-    }
+      if (error) throw error;
 
-    setModule(data);
-    
-    // Check if current user is owner
-    const { data: user } = await supabase.auth.getUser();
-    if (user.user) {
-      setIsOwner(data.user_id === user.user.id);
+      setModule(data);
+      
+      // Check if current user is owner
+      const { data: user } = await supabase.auth.getUser();
+      if (user.user) {
+        setIsOwner(data.user_id === user.user.id);
+      }
+    } catch (error) {
+      console.error("Failed to load module:", error);
+      toast.error("Failed to load module data", {
+        description: "Unable to fetch module information. Please try again.",
+        action: {
+          label: "Retry",
+          onClick: () => loadModule(),
+        },
+        cancel: {
+          label: "Go Back",
+          onClick: () => navigate("/dashboard"),
+        },
+      });
     }
   };
 
@@ -147,17 +185,28 @@ const Module = () => {
 
       if (error) throw error;
 
-      toast.success("Module reset! You can start fresh.");
+      toast.success("Module reset successfully!", {
+        description: "You can now start fresh with all content.",
+      });
+      
       // Clear any saved assessment sessions for this module
       try {
         localStorage.removeItem(`quizState:${id}:quiz`);
         localStorage.removeItem(`quizState:${id}:final_test`);
         localStorage.removeItem(`assignmentState:${id}`);
       } catch {}
+      
       loadModule();
       setActiveTab("resources");
     } catch (error: any) {
-      toast.error(error.message || "Failed to reset module");
+      console.error("Failed to reset module:", error);
+      toast.error("Failed to reset module", {
+        description: error.message || "Unable to reset the module. Please try again.",
+        action: {
+          label: "Retry",
+          onClick: () => handleResetModule(),
+        },
+      });
     } finally {
       setLoading(false);
     }
