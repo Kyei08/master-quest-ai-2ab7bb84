@@ -18,10 +18,10 @@ export const SyncIndicator = ({ syncing, lastAutoSave, onSync, disabled, queueSi
             "w-4 h-4 transition-all duration-300",
             syncing && "animate-pulse text-primary"
           )} />
-          <span>Last synced: {lastAutoSave.toLocaleTimeString()}</span>
+          <span>Last saved: {lastAutoSave.toLocaleTimeString()}</span>
           {queueSize > 0 && (
             <span className="ml-1 px-1.5 py-0.5 rounded-full bg-warning/20 text-warning text-xs font-medium">
-              {queueSize} queued
+              {queueSize} pending
             </span>
           )}
         </div>
@@ -41,7 +41,7 @@ export const SyncIndicator = ({ syncing, lastAutoSave, onSync, disabled, queueSi
           "w-3.5 h-3.5 transition-transform duration-500",
           syncing && "animate-spin"
         )} />
-        <span>{syncing ? "Syncing..." : "Sync Now"}</span>
+        <span>{syncing ? "Saving..." : "Save"}</span>
       </button>
     </div>
   );

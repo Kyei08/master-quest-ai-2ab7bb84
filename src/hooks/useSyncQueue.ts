@@ -148,8 +148,8 @@ export const useSyncQueue = () => {
     setProcessing(false);
 
     if (successCount > 0) {
-      toast.success(`✅ Synced ${successCount} ${successCount === 1 ? 'item' : 'items'} from queue`, {
-        duration: 4000,
+      toast.success(`✅ Saved ${successCount} ${successCount === 1 ? 'item' : 'items'} successfully`, {
+        duration: 3000,
       });
     }
   };
