@@ -13,9 +13,9 @@ export const ConflictAlert = ({ conflictedTabs, onRefresh, onDismiss }: Conflict
 
   return (
     <Alert variant="default" className="border-info/50 bg-info/5">
-      <AlertCircle className="h-4 w-4 text-info" />
-      <AlertTitle className="text-info">Sync Conflict Resolved</AlertTitle>
-      <AlertDescription className="text-sm space-y-3">
+      <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info" />
+      <AlertTitle className="text-info text-sm sm:text-base">Sync Conflict Resolved</AlertTitle>
+      <AlertDescription className="text-xs sm:text-sm space-y-2 sm:space-y-3">
         <div>
           Your local changes to{" "}
           <strong>
@@ -27,20 +27,22 @@ export const ConflictAlert = ({ conflictedTabs, onRefresh, onDismiss }: Conflict
           </strong>{" "}
           were not saved because a newer version exists from another device.
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col xs:flex-row gap-2">
           <Button
             size="sm"
             variant="outline"
             onClick={onRefresh}
-            className="gap-2"
+            className="gap-1.5 sm:gap-2 h-8 text-xs sm:text-sm"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Reload Latest Version
+            <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="hidden xs:inline">Reload Latest Version</span>
+            <span className="xs:hidden">Reload</span>
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={onDismiss}
+            className="h-8 text-xs sm:text-sm"
           >
             Dismiss
           </Button>

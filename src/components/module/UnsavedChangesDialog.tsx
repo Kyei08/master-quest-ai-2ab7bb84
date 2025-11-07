@@ -27,15 +27,15 @@ export const UnsavedChangesDialog = ({
 }: UnsavedChangesDialogProps) => {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="animate-scale-in">
+      <AlertDialogContent className="animate-scale-in max-w-[calc(100%-2rem)] sm:max-w-lg">
         <AlertDialogHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-warning" />
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
             </div>
-            <AlertDialogTitle className="text-xl">Unsaved Changes</AlertDialogTitle>
+            <AlertDialogTitle className="text-lg sm:text-xl">Unsaved Changes</AlertDialogTitle>
           </div>
-          <AlertDialogDescription className="text-base space-y-3">
+          <AlertDialogDescription className="text-sm sm:text-base space-y-2 sm:space-y-3">
             <p>
               You have unsaved changes in{" "}
               <span className="font-semibold text-foreground">
@@ -43,25 +43,26 @@ export const UnsavedChangesDialog = ({
               </span>
               .
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Would you like to save your progress before continuing?
             </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-          <AlertDialogCancel className="sm:order-1">Cancel</AlertDialogCancel>
+        <AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:gap-2">
+          <AlertDialogCancel className="w-full sm:w-auto sm:order-1 h-11">Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={onContinueWithoutSaving}
-            className="sm:order-2 bg-secondary text-secondary-foreground hover:bg-secondary/80"
+            className="w-full sm:w-auto sm:order-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-11"
           >
-            <SkipForward className="w-4 h-4 mr-2" />
-            Continue Without Saving
+            <SkipForward className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
+            <span className="hidden sm:inline">Continue Without Saving</span>
+            <span className="sm:hidden">Skip</span>
           </AlertDialogAction>
           <AlertDialogAction
             onClick={onSaveAndContinue}
-            className="sm:order-3 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="w-full sm:w-auto sm:order-3 bg-primary text-primary-foreground hover:bg-primary/90 h-11"
           >
-            <Save className="w-4 h-4 mr-2" />
+            <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
             Save & Continue
           </AlertDialogAction>
         </AlertDialogFooter>

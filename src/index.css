@@ -114,4 +114,27 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Improve mobile touch targets - minimum 44x44px */
+  button, a, input, select, textarea {
+    @apply min-h-[44px] sm:min-h-0;
+  }
+  
+  /* Prevent text size adjustment on mobile */
+  html {
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Better scrolling on mobile */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Smooth font rendering */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }

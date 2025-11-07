@@ -102,10 +102,10 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero">
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Welcome back!</h2>
-          <p className="text-muted-foreground">Continue your journey to mastery</p>
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2">Welcome back!</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Continue your journey to mastery</p>
           {user && (
             <p className="text-xs text-muted-foreground mt-1">
               Logged in as: {user.email}
@@ -120,7 +120,7 @@ const Dashboard = () => {
           </>
         )}
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 mb-12">
+        <div className="grid gap-4 sm:gap-6 md:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-8 sm:mb-12">
           <Card className="shadow-card-custom">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -151,39 +151,39 @@ const Dashboard = () => {
         </div>
 
         <div>
-          <h3 className="text-2xl font-bold mb-6">Your Modules</h3>
+          <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Your Modules</h3>
           {modules.length === 0 ? (
             <Card className="shadow-card-custom">
-              <CardContent className="py-12 text-center">
-                <BookOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">
+              <CardContent className="py-8 sm:py-12 text-center">
+                <BookOpen className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-muted-foreground" />
+                <p className="text-sm sm:text-base text-muted-foreground">
                   No modules yet. Create your first module to get started!
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {modules.map((module) => (
                 <Card
                   key={module.id}
-                  className="shadow-card-custom hover:shadow-glow transition-shadow cursor-pointer"
+                  className="shadow-card-custom hover:shadow-glow transition-all cursor-pointer active:scale-[0.98]"
                   onClick={() => navigate(`/module/${module.id}`)}
                 >
-                  <CardHeader>
+                  <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-lg">{module.topic}</CardTitle>
+                      <CardTitle className="text-base sm:text-lg line-clamp-2">{module.topic}</CardTitle>
                       {getStatusBadge(module.status)}
                     </div>
-                    <CardDescription className="flex items-center gap-2 text-sm">
+                    <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
                       <Clock className="w-3 h-3" />
                       {new Date(module.created_at).toLocaleDateString()}
                     </CardDescription>
                   </CardHeader>
                   {module.final_score !== null && (
-                    <CardContent>
+                    <CardContent className="pt-0">
                       <div className="flex items-center gap-2">
-                        <Trophy className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-medium">
+                        <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                        <span className="text-xs sm:text-sm font-medium">
                           Final Score: {module.final_score}%
                         </span>
                       </div>

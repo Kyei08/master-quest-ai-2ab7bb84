@@ -257,45 +257,56 @@ const Module = () => {
   return (
     <div className="min-h-screen bg-gradient-hero">
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">{module.topic}</h1>
-              <p className="text-sm text-muted-foreground">
+        <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="w-full sm:w-auto">
+              <h1 className="text-xl sm:text-2xl font-bold truncate">{module.topic}</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Status: {module.status.replace("_", " ").toUpperCase()}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto justify-end">
               {onlineCount > 0 && (
                 <ModulePresence users={presenceUsers} variant="compact" />
               )}
               {memberCount > 0 && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Users className="w-4 h-4" />
+                <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">{memberCount + 1} total</span>
+                  <span className="sm:hidden">{memberCount + 1}</span>
                 </div>
               )}
               {isOwner && (
                 <Button 
-                  variant="outline" 
+                  variant="outline"
+                  size="sm"
                   onClick={() => setShareDialogOpen(true)}
+                  className="h-8 sm:h-9"
                 >
-                  <Share2 className="w-4 h-4 mr-2" />
+                  <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Share</span>
                 </Button>
               )}
               <Button 
-                variant={activeTab === "discussions" ? "default" : "outline"} 
+                variant={activeTab === "discussions" ? "default" : "outline"}
+                size="sm"
                 onClick={() => setActiveTab("discussions")}
+                className="h-8 sm:h-9"
               >
-                <MessageCircle className="w-4 h-4 mr-2" />
+                <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Discuss</span>
               </Button>
               {isOwner && (
-                <Button variant="outline" onClick={handleResetModule} disabled={loading}>
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Reset Module</span>
-                  <span className="sm:hidden">Reset</span>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetModule} 
+                  disabled={loading}
+                  className="h-8 sm:h-9"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden lg:inline">Reset Module</span>
+                  <span className="lg:hidden hidden sm:inline">Reset</span>
                 </Button>
               )}
             </div>
@@ -303,7 +314,7 @@ const Module = () => {
         </div>
       </div>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         <BatchSyncProvider moduleId={id!} onConflict={handleConflict}>
           <ModuleContent 
             module={module} 
@@ -458,38 +469,38 @@ const ModuleContent = ({
         autoSyncing={autoSyncInProgress}
       />
       
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-4">
-        <TabsList className="grid w-full grid-cols-7 mb-8 h-auto gap-1 p-1">
-          <TabsTrigger value="resources" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-            <BookOpen className="w-4 h-4 sm:mr-0" />
-            <span className="text-xs sm:text-sm">Resources</span>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-3 sm:mt-4">
+        <TabsList className="grid w-full grid-cols-7 mb-4 sm:mb-8 h-auto gap-0.5 sm:gap-1 p-0.5 sm:p-1 overflow-x-auto">
+          <TabsTrigger value="resources" className="flex-col gap-0.5 sm:gap-1 px-1 sm:px-2 py-1.5 sm:py-2 min-w-[60px]">
+            <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[10px] sm:text-xs leading-tight">Resources</span>
           </TabsTrigger>
-          <TabsTrigger value="flashcards" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-            <CreditCard className="w-4 h-4 sm:mr-0" />
-            <span className="text-xs sm:text-sm">Flashcards</span>
+          <TabsTrigger value="flashcards" className="flex-col gap-0.5 sm:gap-1 px-1 sm:px-2 py-1.5 sm:py-2 min-w-[60px]">
+            <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[10px] sm:text-xs leading-tight">Flashcards</span>
           </TabsTrigger>
-          <TabsTrigger value="presentations" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-            <Presentation className="w-4 h-4 sm:mr-0" />
-            <span className="text-xs sm:text-sm hidden sm:inline">Presentations</span>
-            <span className="text-xs sm:hidden">Slides</span>
+          <TabsTrigger value="presentations" className="flex-col gap-0.5 sm:gap-1 px-1 sm:px-2 py-1.5 sm:py-2 min-w-[60px]">
+            <Presentation className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[10px] sm:text-xs leading-tight hidden xs:inline">Presentations</span>
+            <span className="text-[10px] xs:hidden leading-tight">Slides</span>
           </TabsTrigger>
-          <TabsTrigger value="assignment" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-            <FileText className="w-4 h-4 sm:mr-0" />
-            <span className="text-xs sm:text-sm">Assignment</span>
+          <TabsTrigger value="assignment" className="flex-col gap-0.5 sm:gap-1 px-1 sm:px-2 py-1.5 sm:py-2 min-w-[60px]">
+            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[10px] sm:text-xs leading-tight">Assignment</span>
           </TabsTrigger>
-          <TabsTrigger value="quiz" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-            <Sparkles className="w-4 h-4 sm:mr-0" />
-            <span className="text-xs sm:text-sm hidden sm:inline">Practice Quiz</span>
-            <span className="text-xs sm:hidden">Quiz</span>
+          <TabsTrigger value="quiz" className="flex-col gap-0.5 sm:gap-1 px-1 sm:px-2 py-1.5 sm:py-2 min-w-[60px]">
+            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[10px] sm:text-xs leading-tight hidden xs:inline">Practice Quiz</span>
+            <span className="text-[10px] xs:hidden leading-tight">Quiz</span>
           </TabsTrigger>
-          <TabsTrigger value="final-test" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-            <GraduationCap className="w-4 h-4 sm:mr-0" />
-            <span className="text-xs sm:text-sm hidden sm:inline">Final Test</span>
-            <span className="text-xs sm:hidden">Test</span>
+          <TabsTrigger value="final-test" className="flex-col gap-0.5 sm:gap-1 px-1 sm:px-2 py-1.5 sm:py-2 min-w-[60px]">
+            <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[10px] sm:text-xs leading-tight hidden xs:inline">Final Test</span>
+            <span className="text-[10px] xs:hidden leading-tight">Test</span>
           </TabsTrigger>
-          <TabsTrigger value="results" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
-            <GraduationCap className="w-4 h-4 sm:mr-0" />
-            <span className="text-xs sm:text-sm">Results</span>
+          <TabsTrigger value="results" className="flex-col gap-0.5 sm:gap-1 px-1 sm:px-2 py-1.5 sm:py-2 min-w-[60px]">
+            <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[10px] sm:text-xs leading-tight">Results</span>
           </TabsTrigger>
         </TabsList>
 

@@ -44,9 +44,9 @@ export const BatchSyncIndicator = ({
     <div className="space-y-3">
       {queueSize > 0 && (
         <Alert variant="default" className="border-warning/50 bg-warning/5">
-          <AlertTriangle className="h-4 w-4 text-warning" />
-          <AlertTitle className="text-warning">Pending Changes</AlertTitle>
-          <AlertDescription className="text-sm">
+          <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-warning" />
+          <AlertTitle className="text-warning text-sm sm:text-base">Pending Changes</AlertTitle>
+          <AlertDescription className="text-xs sm:text-sm">
             {queueSize} {queueSize === 1 ? 'change' : 'changes'} queued for sync.
             {nextRetryTime && ` ${formatRetryTime(nextRetryTime)}.`}
             {!isOnline && " Waiting for stable connection..."}
@@ -58,18 +58,22 @@ export const BatchSyncIndicator = ({
         {!isOnline && (
           <div className="text-xs text-warning flex items-center gap-1.5 px-2 py-1 bg-warning/10 rounded-md">
             <span className="w-2 h-2 bg-warning rounded-full animate-pulse" />
-            Connection unstable
+            <span className="hidden xs:inline">Connection unstable</span>
+            <span className="xs:hidden">Offline</span>
           </div>
         )}
         
         {lastBatchSync && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground animate-fade-in">
             <Cloud className={cn(
-              "w-4 h-4 transition-all duration-300",
+              "w-3.5 h-3.5 sm:w-4 sm:h-4 transition-all duration-300",
               (syncing || autoSyncing) && "animate-pulse text-primary"
             )} />
-            <span>
+            <span className="hidden xs:inline">
               {autoSyncing ? "Auto-saving..." : `Last synced: ${lastBatchSync.toLocaleTimeString()}`}
+            </span>
+            <span className="xs:hidden">
+              {autoSyncing ? "Saving..." : lastBatchSync.toLocaleTimeString()}
             </span>
           </div>
         )}
@@ -80,15 +84,15 @@ export const BatchSyncIndicator = ({
           size="sm"
           variant="outline"
           className={cn(
-            "gap-2",
+            "gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm",
             (syncing || autoSyncing) && "opacity-70"
           )}
         >
           <RefreshCw className={cn(
-            "w-3.5 h-3.5 transition-transform duration-500",
+            "w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-500",
             (syncing || autoSyncing) && "animate-spin"
           )} />
-          <span>
+          <span className="hidden xs:inline">
             {autoSyncing 
               ? "Auto-saving..." 
               : syncing 
@@ -97,8 +101,11 @@ export const BatchSyncIndicator = ({
                   ? "No changes" 
                   : "Sync All Tabs"}
           </span>
+          <span className="xs:hidden">
+            {autoSyncing || syncing ? "Saving..." : "Sync"}
+          </span>
           {registeredCount > 0 && !syncing && !autoSyncing && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground hidden sm:inline">
               ({registeredCount})
             </span>
           )}

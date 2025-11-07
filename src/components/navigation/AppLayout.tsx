@@ -17,16 +17,16 @@ export function AppLayout({ children }: AppLayoutProps) {
       <OfflineBanner />
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-14 flex items-center justify-between border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10 px-4">
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-12 sm:h-14 flex items-center justify-between border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10 px-2 sm:px-4">
             <SidebarTrigger />
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/profile")}
-              className="rounded-full"
+              className="rounded-full h-8 w-8 sm:h-9 sm:w-9"
             >
-              <User className="w-5 h-5" />
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </header>
           <main className="flex-1 overflow-auto">
