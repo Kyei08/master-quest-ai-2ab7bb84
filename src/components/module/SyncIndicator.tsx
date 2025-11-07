@@ -7,9 +7,20 @@ interface SyncIndicatorProps {
   onSync: () => void;
   disabled?: boolean;
   queueSize?: number;
+  nextRetryTime?: Date | null;
 }
 
-export const SyncIndicator = ({ syncing, lastAutoSave, onSync, disabled, queueSize = 0 }: SyncIndicatorProps) => {
+export const SyncIndicator = ({ syncing, lastAutoSave, onSync, disabled, queueSize = 0, nextRetryTime }: SyncIndicatorProps) => {
+  const formatRetryTime = (date: Date) => {
+    const now = new Date();
+    const diff = date.getTime() - now.getTime();
+    const seconds = Math.ceil(diff / 1000);
+    
+    if (seconds <= 0) return "retrying now...";
+    if (seconds < 60) return `retry in ${seconds}s`;
+    const minutes = Math.ceil(seconds / 60);
+    return `retry in ${minutes}m`;
+  };
   return (
     <div className="flex items-center gap-3">
       {lastAutoSave && (
@@ -20,9 +31,16 @@ export const SyncIndicator = ({ syncing, lastAutoSave, onSync, disabled, queueSi
           )} />
           <span>Last saved: {lastAutoSave.toLocaleTimeString()}</span>
           {queueSize > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-warning/20 text-warning text-xs font-medium">
-              {queueSize} pending
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="px-1.5 py-0.5 rounded-full bg-warning/20 text-warning text-xs font-medium">
+                {queueSize} pending
+              </span>
+              {nextRetryTime && (
+                <span className="text-muted-foreground/70 animate-pulse">
+                  • {formatRetryTime(nextRetryTime)}
+                </span>
+              )}
+            </div>
           )}
         </div>
       )}

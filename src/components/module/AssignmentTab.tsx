@@ -52,7 +52,7 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const { addToQueue, queueSize } = useSyncQueue();
+  const { addToQueue, queueSize, getNextRetryTime } = useSyncQueue();
 
   const storageKey = `assignmentState:${moduleId}`;
 
@@ -281,6 +281,7 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
             lastAutoSave={lastAutoSave}
             onSync={syncToCloud}
             queueSize={queueSize}
+            nextRetryTime={getNextRetryTime()}
           />
         </div>
         

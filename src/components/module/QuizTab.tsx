@@ -50,7 +50,7 @@ const QuizTab = ({ moduleId, moduleTopic, quizType, onComplete }: QuizTabProps) 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const { addToQueue, queueSize } = useSyncQueue();
+  const { addToQueue, queueSize, getNextRetryTime } = useSyncQueue();
 
   const storageKey = `quizState:${moduleId}:${quizType}`;
 
@@ -269,6 +269,7 @@ const QuizTab = ({ moduleId, moduleTopic, quizType, onComplete }: QuizTabProps) 
             lastAutoSave={lastAutoSave}
             onSync={syncToCloud}
             queueSize={queueSize}
+            nextRetryTime={getNextRetryTime()}
           />
         </div>
         

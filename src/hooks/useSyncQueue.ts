@@ -154,6 +154,12 @@ export const useSyncQueue = () => {
     }
   };
 
+  const getNextRetryTime = (): Date | null => {
+    if (queue.length === 0) return null;
+    const nextRetry = Math.min(...queue.map(item => item.nextRetryAt));
+    return new Date(nextRetry);
+  };
+
   return {
     queue,
     addToQueue,
@@ -161,5 +167,6 @@ export const useSyncQueue = () => {
     processQueue,
     queueSize: queue.length,
     processing,
+    getNextRetryTime,
   };
 };
