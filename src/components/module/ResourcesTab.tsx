@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Plus, ExternalLink, Trash2, BookOpen, Sparkles } from "lucide-react";
 
@@ -25,12 +26,14 @@ const ResourcesTab = ({ moduleId, moduleTopic }: ResourcesTabProps) => {
   const [newUrl, setNewUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [loadingResources, setLoadingResources] = useState(true);
 
   useEffect(() => {
     loadResources();
   }, [moduleId]);
 
   const loadResources = async () => {
+    setLoadingResources(true);
     const { data, error } = await supabase
       .from("resources")
       .select("*")
@@ -39,10 +42,12 @@ const ResourcesTab = ({ moduleId, moduleTopic }: ResourcesTabProps) => {
 
     if (error) {
       toast.error("Failed to load resources");
+      setLoadingResources(false);
       return;
     }
 
     setResources(data || []);
+    setLoadingResources(false);
   };
 
   const generateTeacherPicks = async () => {
@@ -105,6 +110,46 @@ const ResourcesTab = ({ moduleId, moduleTopic }: ResourcesTabProps) => {
 
   const teacherPicks = resources.filter((r) => r.resource_type === "teacher_pick");
   const userResources = resources.filter((r) => r.resource_type === "user");
+
+  if (loadingResources) {
+    return (
+      <div className="space-y-8">
+        <Card className="shadow-card-custom">
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-64 mt-2" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="p-4 bg-muted/50 rounded-lg">
+                  <Skeleton className="h-5 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-card-custom">
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-56 mt-2" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-32 w-full mb-4" />
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="p-4 bg-muted/50 rounded-lg">
+                  <Skeleton className="h-5 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

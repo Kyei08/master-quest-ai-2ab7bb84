@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useSyncQueue } from "@/hooks/useSyncQueue";
 import { QuizEmpty } from "./quiz/QuizEmpty";
@@ -48,6 +49,7 @@ const QuizTab = ({ moduleId, moduleTopic, quizType, onComplete }: QuizTabProps) 
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [answers, setAnswers] = useState<Record<number, number | string>>({});
   const [generating, setGenerating] = useState(false);
+  const [loadingQuiz, setLoadingQuiz] = useState(true);
   const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
   const [totalMarks, setTotalMarks] = useState(0);
@@ -65,6 +67,7 @@ const QuizTab = ({ moduleId, moduleTopic, quizType, onComplete }: QuizTabProps) 
 
   // Load cloud-saved draft
   const loadCloudDraft = async () => {
+    setLoadingQuiz(true);
     try {
       const { data, error } = await supabase
         .from("module_progress_drafts")
@@ -87,6 +90,8 @@ const QuizTab = ({ moduleId, moduleTopic, quizType, onComplete }: QuizTabProps) 
       }
     } catch (e) {
       console.error("Failed to load cloud draft", e);
+    } finally {
+      setLoadingQuiz(false);
     }
   };
 
@@ -219,6 +224,31 @@ const QuizTab = ({ moduleId, moduleTopic, quizType, onComplete }: QuizTabProps) 
       console.error("Failed to save attempt:", error);
     }
   };
+
+  if (loadingQuiz) {
+    return (
+      <Card className="shadow-card-custom">
+        <CardHeader>
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96 mt-2" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-full" />
+            <div className="space-y-2">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-between pt-6">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!quizData) {
     return (

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight, RotateCw, Sparkles, Edit2, Save, X, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingFlashcards, setLoadingFlashcards] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [editedQuestion, setEditedQuestion] = useState("");
@@ -54,6 +56,7 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
   }, [moduleId]);
 
   const loadFlashcards = async () => {
+    setLoadingFlashcards(true);
     const { data, error } = await supabase
       .from('flashcards')
       .select('*')
@@ -62,10 +65,12 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
 
     if (error) {
       console.error('Error loading flashcards:', error);
+      setLoadingFlashcards(false);
       return;
     }
 
     setFlashcards(data || []);
+    setLoadingFlashcards(false);
   };
 
   const generateFlashcards = async () => {
@@ -197,6 +202,26 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
       toast.error(error.message || "Failed to delete flashcard");
     }
   };
+
+  if (loadingFlashcards) {
+    return (
+      <Card className="shadow-card-custom">
+        <CardHeader>
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-4 w-64 mt-2" />
+        </CardHeader>
+        <CardContent>
+          <div className="min-h-[400px] flex items-center justify-center">
+            <div className="space-y-4 w-full max-w-md">
+              <Skeleton className="h-8 w-3/4 mx-auto" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-4 w-1/2 mx-auto" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (flashcards.length === 0 && !isCreating) {
     return (

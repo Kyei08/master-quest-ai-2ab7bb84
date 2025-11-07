@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useSyncQueue } from "@/hooks/useSyncQueue";
 import { AssignmentEmpty } from "./assignment/AssignmentEmpty";
@@ -50,6 +51,7 @@ interface AssignmentTabProps {
 const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [loadingAssignment, setLoadingAssignment] = useState(true);
   const [currentSection, setCurrentSection] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -164,6 +166,7 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
   }, [assignment, answers, currentSection, submitted]);
 
   const loadAssignment = async () => {
+    setLoadingAssignment(true);
     const { data, error } = await supabase
       .from("assignments")
       .select("*")
@@ -172,6 +175,7 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
 
     if (error) {
       toast.error("Failed to load assignment");
+      setLoadingAssignment(false);
       return;
     }
 
@@ -181,6 +185,7 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
         content: data.content as unknown as AssignmentContent,
       });
     }
+    setLoadingAssignment(false);
   };
 
   const generateAssignment = async () => {
@@ -239,6 +244,31 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
       setSubmitting(false);
     }
   };
+
+  if (loadingAssignment) {
+    return (
+      <Card className="shadow-card-custom">
+        <CardHeader>
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96 mt-2" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-56" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+          <div className="flex justify-between">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!assignment) {
     return (

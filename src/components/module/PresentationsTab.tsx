@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Presentation, Download, Sparkles, Edit2, Save, X, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingPresentations, setLoadingPresentations] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
@@ -82,6 +84,7 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
   }, [moduleId, currentPresentationId]);
 
   const loadPresentations = async () => {
+    setLoadingPresentations(true);
     const { data, error } = await supabase
       .from('presentations')
       .select('*')
@@ -90,6 +93,7 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
 
     if (error) {
       console.error('Error loading presentations:', error);
+      setLoadingPresentations(false);
       return;
     }
 
@@ -100,6 +104,7 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
       setCurrentPresentationId(data[0].id);
       loadSlides(data[0].id);
     }
+    setLoadingPresentations(false);
   };
 
   const loadSlides = async (presentationId: string) => {
@@ -283,6 +288,30 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
       toast.error(error.message || "Failed to delete slide");
     }
   };
+
+  if (loadingPresentations) {
+    return (
+      <Card className="shadow-card-custom">
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-64 mt-2" />
+        </CardHeader>
+        <CardContent>
+          <div className="min-h-[400px] flex items-center justify-center">
+            <div className="space-y-4 w-full max-w-2xl">
+              <Skeleton className="h-8 w-3/4 mx-auto" />
+              <Skeleton className="h-48 w-full" />
+              <div className="flex justify-center gap-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-2 w-2 rounded-full" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (slides.length === 0 && !isCreating) {
     return (
