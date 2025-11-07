@@ -106,6 +106,11 @@ const Dashboard = () => {
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Welcome back!</h2>
           <p className="text-muted-foreground">Continue your journey to mastery</p>
+          {user && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Logged in as: {user.email}
+            </p>
+          )}
         </div>
 
         {modules.length > 0 && (
