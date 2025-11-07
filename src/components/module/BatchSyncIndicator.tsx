@@ -36,7 +36,7 @@ export const BatchSyncIndicator = ({
     return `retry in ${minutes}m`;
   };
 
-  if (!isOnline && queueSize === 0) {
+  if (!isOnline && queueSize === 0 && registeredCount === 0) {
     return null;
   }
 
@@ -45,20 +45,20 @@ export const BatchSyncIndicator = ({
       {queueSize > 0 && (
         <Alert variant="default" className="border-warning/50 bg-warning/5">
           <AlertTriangle className="h-4 w-4 text-warning" />
-          <AlertTitle className="text-warning">Pending Changes Across Tabs</AlertTitle>
+          <AlertTitle className="text-warning">Pending Changes</AlertTitle>
           <AlertDescription className="text-sm">
-            You have {queueSize} unsaved change{queueSize > 1 ? 's' : ''} across all tabs.
+            {queueSize} {queueSize === 1 ? 'change' : 'changes'} queued for sync.
             {nextRetryTime && ` ${formatRetryTime(nextRetryTime)}.`}
-            {!isOnline && " You're offline - changes will sync when reconnected."}
+            {!isOnline && " Waiting for stable connection..."}
           </AlertDescription>
         </Alert>
       )}
       
       <div className="flex items-center gap-3 flex-wrap">
         {!isOnline && (
-          <div className="text-xs text-warning flex items-center gap-1">
+          <div className="text-xs text-warning flex items-center gap-1.5 px-2 py-1 bg-warning/10 rounded-md">
             <span className="w-2 h-2 bg-warning rounded-full animate-pulse" />
-            Offline
+            Connection unstable
           </div>
         )}
         
@@ -89,7 +89,13 @@ export const BatchSyncIndicator = ({
             (syncing || autoSyncing) && "animate-spin"
           )} />
           <span>
-            {autoSyncing ? "Auto-syncing..." : syncing ? "Syncing All..." : "Sync All Tabs"}
+            {autoSyncing 
+              ? "Auto-saving..." 
+              : syncing 
+                ? "Syncing..." 
+                : registeredCount === 0 
+                  ? "No changes" 
+                  : "Sync All Tabs"}
           </span>
           {registeredCount > 0 && !syncing && !autoSyncing && (
             <span className="text-xs text-muted-foreground">

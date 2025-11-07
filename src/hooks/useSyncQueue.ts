@@ -12,6 +12,7 @@ interface QueueItem {
   timestamp: number;
   retryCount: number;
   nextRetryAt: number;
+  lastSyncAttempt?: number;
 }
 
 const MAX_RETRIES = 5;
@@ -114,6 +115,29 @@ export const useSyncQueue = () => {
 
     for (const item of itemsToProcess) {
       try {
+        // Check if there's a newer version on the server to prevent conflicts
+        const { data: existingData, error: fetchError } = await supabase
+          .from("module_progress_drafts")
+          .select("updated_at")
+          .eq("module_id", item.moduleId)
+          .eq("draft_type", item.draftType)
+          .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
+        // If there's a newer version on server, skip this item
+        if (existingData?.updated_at) {
+          const serverTimestamp = new Date(existingData.updated_at).getTime();
+          const localTimestamp = item.timestamp;
+          
+          if (serverTimestamp > localTimestamp) {
+            console.log("Skipping sync - server has newer version");
+            removeFromQueue(item.id);
+            continue;
+          }
+        }
+
+        // Perform the upsert with conflict detection
         const { error } = await supabase
           .from("module_progress_drafts")
           .upsert([{
@@ -121,20 +145,29 @@ export const useSyncQueue = () => {
             draft_type: item.draftType,
             quiz_type: item.quizType,
             data: item.data as any,
-          }]);
+          }], {
+            onConflict: 'module_id,draft_type,quiz_type',
+            ignoreDuplicates: false
+          });
 
         if (error) throw error;
 
         removeFromQueue(item.id);
         successCount++;
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to sync queued item:", error);
+        
+        // Check if it's a network error vs other errors
+        const isNetworkError = error?.message?.includes("fetch") || 
+                               error?.message?.includes("network") ||
+                               error?.code === "PGRST301";
         
         if (item.retryCount + 1 >= MAX_RETRIES) {
           // Max retries reached, remove from queue
           removeFromQueue(item.id);
-          toast.error(`Sync failed after ${MAX_RETRIES} attempts`, {
-            duration: 4000,
+          toast.error(`Sync failed: ${isNetworkError ? 'Connection issue' : 'Server error'}`, {
+            description: "Changes could not be saved after multiple attempts",
+            duration: 5000,
           });
         } else {
           // Update retry info with exponential backoff
@@ -148,7 +181,7 @@ export const useSyncQueue = () => {
     setProcessing(false);
 
     if (successCount > 0) {
-      toast.success(`✅ Saved ${successCount} ${successCount === 1 ? 'item' : 'items'} successfully`, {
+      toast.success(`✅ Synced ${successCount} ${successCount === 1 ? 'change' : 'changes'}`, {
         duration: 3000,
       });
     }

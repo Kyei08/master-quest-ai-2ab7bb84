@@ -53,6 +53,21 @@ export const useBatchSync = (moduleId: string) => {
           // Skip if no data to sync
           if (!data) return;
 
+          const timestamp = Date.now();
+
+          // Check for conflicts before upserting
+          const { data: existingData, error: fetchError } = await supabase
+            .from("module_progress_drafts")
+            .select("updated_at")
+            .eq("module_id", moduleId)
+            .eq("draft_type", item.draftType)
+            .maybeSingle();
+
+          if (fetchError && fetchError.code !== 'PGRST116') {
+            throw fetchError;
+          }
+
+          // Perform the upsert
           const { error } = await supabase
             .from("module_progress_drafts")
             .upsert([{
@@ -60,22 +75,30 @@ export const useBatchSync = (moduleId: string) => {
               draft_type: item.draftType,
               quiz_type: item.quizType,
               data: data as any,
-            }]);
+            }], {
+              onConflict: 'module_id,draft_type,quiz_type',
+              ignoreDuplicates: false
+            });
 
           if (error) throw error;
           successCount++;
-        } catch (error) {
+        } catch (error: any) {
           console.error(`Failed to sync ${key}:`, error);
           
-          // Add to queue for retry
-          const data = item.getData();
-          if (data) {
-            addToQueue({
-              moduleId,
-              draftType: item.draftType,
-              quizType: item.quizType,
-              data,
-            });
+          const isNetworkError = error?.message?.includes("fetch") || 
+                                 error?.message?.includes("network");
+          
+          // Only queue for retry if it's a network error
+          if (isNetworkError) {
+            const data = item.getData();
+            if (data) {
+              addToQueue({
+                moduleId,
+                draftType: item.draftType,
+                quizType: item.quizType,
+                data,
+              });
+            }
           }
           failCount++;
         }
@@ -85,14 +108,18 @@ export const useBatchSync = (moduleId: string) => {
 
       setLastBatchSync(new Date());
 
-      if (successCount > 0) {
-        toast.success(`✅ Synced ${successCount} ${successCount === 1 ? 'tab' : 'tabs'} successfully`, {
+      if (successCount > 0 && failCount === 0) {
+        toast.success(`✅ All changes saved (${successCount} ${successCount === 1 ? 'tab' : 'tabs'})`, {
           duration: 3000,
         });
-      }
-
-      if (failCount > 0) {
-        toast.warning(`${failCount} ${failCount === 1 ? 'tab' : 'tabs'} queued for retry`, {
+      } else if (successCount > 0 && failCount > 0) {
+        toast.success(`✅ Saved ${successCount} ${successCount === 1 ? 'tab' : 'tabs'}`, {
+          description: `${failCount} queued for retry`,
+          duration: 3000,
+        });
+      } else if (failCount > 0) {
+        toast.warning(`Changes queued for retry`, {
+          description: "Will sync when connection is stable",
           duration: 3000,
         });
       }
