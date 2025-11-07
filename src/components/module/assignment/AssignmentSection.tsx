@@ -1,4 +1,7 @@
 import { Textarea } from "@/components/ui/textarea";
+import { AlternativeQuestionDialog } from "./AlternativeQuestionDialog";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Task {
   id: string;
@@ -19,9 +22,35 @@ interface AssignmentSectionProps {
   section: Section;
   answers: Record<string, string>;
   onAnswerChange: (taskId: string, value: string) => void;
+  assignmentId?: string;
 }
 
-export const AssignmentSection = ({ section, answers, onAnswerChange }: AssignmentSectionProps) => {
+export const AssignmentSection = ({ section, answers, onAnswerChange, assignmentId }: AssignmentSectionProps) => {
+  const [isInstructor, setIsInstructor] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    checkRole();
+  }, []);
+
+  const checkRole = async () => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userData.user.id);
+
+      const hasInstructorRole = roles?.some(
+        (r) => r.role === "instructor" || r.role === "admin"
+      );
+      setIsInstructor(!!hasInstructorRole);
+    } catch (error) {
+      console.error("Failed to check role:", error);
+    }
+  };
   return (
     <div className="mb-6">
       <h3 className="text-lg sm:text-xl font-bold text-primary mb-2 break-words">
@@ -30,11 +59,21 @@ export const AssignmentSection = ({ section, answers, onAnswerChange }: Assignme
       <p className="text-xs sm:text-sm mb-4 break-words">{section.description}</p>
       
       <div className="space-y-4 sm:space-y-6">
-        {section.tasks.map((task) => (
+        {section.tasks.map((task, index) => (
           <div key={task.id} className="border border-primary/20 rounded-lg p-3 sm:p-4 bg-card">
-            <p className="font-semibold mb-3 text-sm sm:text-base break-words">
-              {task.id}. {task.question} ({task.marks} Marks)
-            </p>
+            <div className="flex items-start justify-between mb-3">
+              <p className="font-semibold text-sm sm:text-base break-words flex-1">
+                {task.id}. {task.question} ({task.marks} Marks)
+              </p>
+              {isInstructor && assignmentId && (
+                <AlternativeQuestionDialog
+                  assignmentId={assignmentId}
+                  originalQuestionIndex={parseInt(task.id)}
+                  originalQuestion={task.question}
+                  onSubmitSuccess={() => setRefreshKey(prev => prev + 1)}
+                />
+              )}
+            </div>
             <Textarea
               placeholder={`Enter your response for Task ${task.id} here...`}
               value={answers[task.id] || ""}

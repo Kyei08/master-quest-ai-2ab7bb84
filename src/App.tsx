@@ -12,6 +12,7 @@ import Grading from "./pages/Grading";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import ContentReview from "./pages/ContentReview";
+import AlternativeQuestions from "./pages/AlternativeQuestions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/module/:id" element={<AppLayout><Module /></AppLayout>} />
           <Route path="/grading" element={<AppLayout><Grading /></AppLayout>} />
           <Route path="/content-review" element={<AppLayout><ContentReview /></AppLayout>} />
+          <Route path="/alternative-questions" element={<AppLayout><AlternativeQuestions /></AppLayout>} />
           <Route path="/admin" element={<AppLayout><Admin /></AppLayout>} />
           <Route path="/profile" element={<AppLayout><Profile /></AppLayout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

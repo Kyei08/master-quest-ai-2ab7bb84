@@ -481,6 +481,71 @@ export type Database = {
         }
         Relationships: []
       }
+      question_usage_metrics: {
+        Row: {
+          alternative_question_id: string | null
+          assignment_id: string | null
+          created_at: string
+          id: string
+          question_index: number
+          score_received: number | null
+          submission_id: string | null
+          total_marks: number
+          used_original: boolean
+        }
+        Insert: {
+          alternative_question_id?: string | null
+          assignment_id?: string | null
+          created_at?: string
+          id?: string
+          question_index: number
+          score_received?: number | null
+          submission_id?: string | null
+          total_marks: number
+          used_original?: boolean
+        }
+        Update: {
+          alternative_question_id?: string | null
+          assignment_id?: string | null
+          created_at?: string
+          id?: string
+          question_index?: number
+          score_received?: number | null
+          submission_id?: string | null
+          total_marks?: number
+          used_original?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_usage_metrics_alternative_question_id_fkey"
+            columns: ["alternative_question_id"]
+            isOneToOne: false
+            referencedRelation: "alternative_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_usage_metrics_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_usage_metrics_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "content_quality_metrics"
+            referencedColumns: ["content_id"]
+          },
+          {
+            foreignKeyName: "question_usage_metrics_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_attempts: {
         Row: {
           attempt_type: string | null

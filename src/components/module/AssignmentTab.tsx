@@ -309,6 +309,7 @@ const AssignmentTab = ({ moduleId, moduleTopic }: AssignmentTabProps) => {
             section={currentSectionData}
             answers={answers}
             onAnswerChange={handleAnswerChange}
+            assignmentId={assignment.id}
           />
         </div>
 

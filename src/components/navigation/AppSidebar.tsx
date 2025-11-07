@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, BookOpen, GraduationCap, LogOut, Sparkles, Shield, CheckSquare } from "lucide-react";
+import { Home, BookOpen, GraduationCap, LogOut, Sparkles, Shield, CheckSquare, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
@@ -66,7 +66,8 @@ export function AppSidebar() {
     { title: "Dashboard", url: "/dashboard", icon: Home },
     ...(isInstructor ? [
       { title: "Grading", url: "/grading", icon: GraduationCap },
-      { title: "Content Review", url: "/content-review", icon: CheckSquare }
+      { title: "Content Review", url: "/content-review", icon: CheckSquare },
+      { title: "Question Bank", url: "/alternative-questions", icon: Lightbulb }
     ] : []),
     ...(isAdmin ? [{ title: "Admin", url: "/admin", icon: Shield }] : []),
   ];
