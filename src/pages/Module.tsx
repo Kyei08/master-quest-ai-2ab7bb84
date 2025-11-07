@@ -18,6 +18,7 @@ import { useModulePresence } from "@/hooks/useModulePresence";
 import { ModulePresence } from "@/components/module/ModulePresence";
 import { BatchSyncProvider, useBatchSyncContext } from "@/contexts/BatchSyncContext";
 import { BatchSyncIndicator } from "@/components/module/BatchSyncIndicator";
+import { UnsavedChangesDialog } from "@/components/module/UnsavedChangesDialog";
 
 interface Module {
   id: string;
@@ -322,38 +323,95 @@ const ModuleContent = ({
   const { syncing, lastBatchSync, syncAll, queueSize, nextRetryTime, registeredCount } = useBatchSyncContext();
   const previousTabRef = useRef(activeTab);
   const [autoSyncInProgress, setAutoSyncInProgress] = useState(false);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
+  const isInitialMount = useRef(true);
 
-  // Auto-sync when switching tabs
+  // Handle tab change with unsaved changes check
+  const handleTabChange = (newTab: string) => {
+    // Skip confirmation on initial mount or if no changes
+    if (isInitialMount.current || registeredCount === 0 || syncing || autoSyncInProgress) {
+      setActiveTab(newTab);
+      return;
+    }
+
+    // Show confirmation dialog if there are unsaved changes
+    setPendingTab(newTab);
+    setShowUnsavedDialog(true);
+  };
+
+  const handleSaveAndContinue = async () => {
+    if (!pendingTab) return;
+
+    setShowUnsavedDialog(false);
+    setAutoSyncInProgress(true);
+
+    try {
+      await syncAll();
+      toast.success("💾 Changes saved successfully", {
+        duration: 2000,
+      });
+      setActiveTab(pendingTab);
+      previousTabRef.current = pendingTab;
+    } catch (error) {
+      console.error("Save failed:", error);
+      toast.error("Failed to save changes", {
+        description: "Please try again or continue without saving",
+      });
+    } finally {
+      setAutoSyncInProgress(false);
+      setPendingTab(null);
+    }
+  };
+
+  const handleContinueWithoutSaving = () => {
+    if (!pendingTab) return;
+
+    toast.info("⚠️ Switched without saving changes", {
+      duration: 2000,
+    });
+    setActiveTab(pendingTab);
+    previousTabRef.current = pendingTab;
+    setShowUnsavedDialog(false);
+    setPendingTab(null);
+  };
+
+  const handleCancelTabSwitch = () => {
+    setShowUnsavedDialog(false);
+    setPendingTab(null);
+  };
+
+  // Mark initial mount as complete after first render
   useEffect(() => {
-    const handleTabChange = async () => {
-      // Skip if this is the first render or if already syncing
-      if (previousTabRef.current === activeTab || syncing || autoSyncInProgress) {
-        return;
-      }
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    }
+  }, []);
 
-      // Only auto-sync if there are registered items to sync
+  // Warn when leaving page with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (registeredCount > 0) {
-        setAutoSyncInProgress(true);
-        try {
-          await syncAll();
-          toast.info("💾 Auto-saved progress from previous tab", {
-            duration: 2000,
-          });
-        } catch (error) {
-          console.error("Auto-sync failed:", error);
-        } finally {
-          setAutoSyncInProgress(false);
-        }
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
       }
-
-      previousTabRef.current = activeTab;
     };
 
-    handleTabChange();
-  }, [activeTab, registeredCount, syncing, syncAll, autoSyncInProgress]);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [registeredCount]);
 
   return (
     <>
+      <UnsavedChangesDialog
+        open={showUnsavedDialog}
+        onOpenChange={handleCancelTabSwitch}
+        onSaveAndContinue={handleSaveAndContinue}
+        onContinueWithoutSaving={handleContinueWithoutSaving}
+        registeredCount={registeredCount}
+      />
+
       <BatchSyncIndicator
         syncing={syncing || autoSyncInProgress}
         lastBatchSync={lastBatchSync}
@@ -364,7 +422,7 @@ const ModuleContent = ({
         autoSyncing={autoSyncInProgress}
       />
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-4">
         <TabsList className="grid w-full grid-cols-7 mb-8 h-auto gap-1 p-1">
           <TabsTrigger value="resources" className="flex-col sm:flex-row gap-1 sm:gap-2 px-2 sm:px-3 py-2">
             <BookOpen className="w-4 h-4 sm:mr-0" />
