@@ -17,6 +17,8 @@ import {
   CheckCircle,
   Clock,
   Check,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { z } from "zod";
@@ -338,36 +340,52 @@ export const DiscussionDetailDialog = ({
 
         <div className="space-y-6">
           {/* Discussion Details */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Button
-                variant={discussion.user_upvoted ? "default" : "outline"}
-                size="sm"
+          <div className="flex gap-6">
+            {/* Vote sidebar */}
+            <div className="flex flex-col items-center gap-2 pt-2">
+              <button
                 onClick={handleUpvoteDiscussion}
-                className="flex items-center gap-1"
+                className="p-2 hover:bg-accent rounded-md transition-colors"
               >
-                <ThumbsUp
-                  className={`w-4 h-4 ${discussion.user_upvoted ? "fill-current" : ""}`}
+                <ArrowUp
+                  className={`w-6 h-6 ${
+                    discussion.user_upvoted
+                      ? "text-primary fill-primary"
+                      : "text-muted-foreground"
+                  }`}
                 />
+              </button>
+              <span
+                className={`text-2xl font-bold ${
+                  discussion.upvotes > 0 ? "text-foreground" : "text-muted-foreground"
+                }`}
+              >
                 {discussion.upvotes}
-              </Button>
+              </span>
+              <ArrowDown className="w-6 h-6 text-muted-foreground opacity-30" />
               {discussion.is_resolved && (
-                <Badge variant="default" className="bg-success">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Resolved
-                </Badge>
+                <CheckCircle className="w-6 h-6 text-success mt-2" />
               )}
             </div>
 
-            <p className="text-base whitespace-pre-wrap">{discussion.content}</p>
+            {/* Content */}
+            <div className="flex-1 space-y-4">
+              <p className="text-base whitespace-pre-wrap leading-relaxed">
+                {discussion.content}
+              </p>
 
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span>by {discussion.profiles.full_name || "Anonymous"}</span>
-              <div className="flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                {formatDistanceToNow(new Date(discussion.created_at), {
-                  addSuffix: true,
-                })}
+              <div className="flex items-center justify-between pt-2 border-t">
+                <div className="text-xs text-muted-foreground">
+                  asked {formatDistanceToNow(new Date(discussion.created_at), {
+                    addSuffix: true,
+                  })}
+                </div>
+                <div className="flex items-center gap-2 text-sm bg-accent/50 p-2 rounded-md">
+                  <span className="text-muted-foreground text-xs">asked by</span>
+                  <span className="font-medium">
+                    {discussion.profiles.full_name || "Anonymous"}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -376,64 +394,85 @@ export const DiscussionDetailDialog = ({
 
           {/* Replies */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <MessageCircle className="w-5 h-5" />
-              <h3 className="text-lg font-semibold">{replies.length} Replies</h3>
-            </div>
+            <h3 className="text-xl font-bold">
+              {replies.length} {replies.length === 1 ? "Answer" : "Answers"}
+            </h3>
 
             {replies.map((reply) => (
               <div
                 key={reply.id}
-                className={`p-4 border rounded-lg ${
-                  reply.is_best_answer ? "border-success bg-success/5" : ""
+                className={`border rounded-lg ${
+                  reply.is_best_answer
+                    ? "border-success bg-success/5"
+                    : "border-border"
                 }`}
               >
-                <div className="flex gap-3">
+                <div className="flex gap-6 p-6">
+                  {/* Vote sidebar */}
                   <div className="flex flex-col items-center gap-2">
-                    <Button
-                      variant={reply.user_upvoted ? "default" : "outline"}
-                      size="sm"
+                    <button
                       onClick={() => handleUpvoteReply(reply.id)}
-                      className="h-auto py-1 px-2 flex flex-col"
+                      className="p-2 hover:bg-accent rounded-md transition-colors"
                     >
-                      <ThumbsUp
-                        className={`w-3 h-3 ${reply.user_upvoted ? "fill-current" : ""}`}
+                      <ArrowUp
+                        className={`w-5 h-5 ${
+                          reply.user_upvoted
+                            ? "text-primary fill-primary"
+                            : "text-muted-foreground"
+                        }`}
                       />
-                      <span className="text-xs">{reply.upvotes}</span>
-                    </Button>
+                    </button>
+                    <span
+                      className={`text-xl font-bold ${
+                        reply.upvotes > 0 ? "text-foreground" : "text-muted-foreground"
+                      }`}
+                    >
+                      {reply.upvotes}
+                    </span>
+                    <ArrowDown className="w-5 h-5 text-muted-foreground opacity-30" />
+                    {reply.is_best_answer && (
+                      <CheckCircle className="w-5 h-5 text-success mt-2 fill-current" />
+                    )}
                   </div>
 
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <p className="whitespace-pre-wrap">{reply.content}</p>
-                      {reply.is_best_answer && (
-                        <Badge variant="default" className="bg-success ml-2">
-                          <Check className="w-3 h-3 mr-1" />
-                          Best Answer
-                        </Badge>
-                      )}
-                    </div>
+                  {/* Content */}
+                  <div className="flex-1 space-y-3">
+                    <p className="text-base whitespace-pre-wrap leading-relaxed">
+                      {reply.content}
+                    </p>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>{reply.profiles.full_name || "Anonymous"}</span>
-                        <span>
-                          {formatDistanceToNow(new Date(reply.created_at), {
+                    <div className="flex items-center justify-between pt-3 border-t">
+                      <div className="flex items-center gap-3">
+                        {isInstructor && !reply.is_best_answer && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMarkBestAnswer(reply.id)}
+                            className="border-success text-success hover:bg-success hover:text-success-foreground"
+                          >
+                            <Check className="w-4 h-4 mr-1" />
+                            Accept Answer
+                          </Button>
+                        )}
+                        {reply.is_best_answer && (
+                          <Badge className="bg-success">
+                            <Check className="w-3 h-3 mr-1" />
+                            Best Answer
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 text-sm bg-accent/50 p-2 rounded-md">
+                        <span className="text-muted-foreground text-xs">
+                          answered {formatDistanceToNow(new Date(reply.created_at), {
                             addSuffix: true,
                           })}
                         </span>
+                        <span className="text-muted-foreground">by</span>
+                        <span className="font-medium">
+                          {reply.profiles.full_name || "Anonymous"}
+                        </span>
                       </div>
-
-                      {isInstructor && !reply.is_best_answer && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleMarkBestAnswer(reply.id)}
-                        >
-                          <Check className="w-4 h-4 mr-1" />
-                          Mark as Best Answer
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </div>
