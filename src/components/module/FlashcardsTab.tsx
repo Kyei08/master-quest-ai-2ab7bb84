@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight, RotateCw, Sparkles, Edit2, Save, X, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCw, Sparkles, Edit2, Save, X, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -12,8 +12,10 @@ interface FlashcardsTabProps {
 }
 
 interface Flashcard {
+  id?: string;
   question: string;
   answer: string;
+  created_by?: string;
 }
 
 const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
@@ -22,19 +24,48 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
   const [flipped, setFlipped] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [editedQuestion, setEditedQuestion] = useState("");
   const [editedAnswer, setEditedAnswer] = useState("");
 
   useEffect(() => {
     loadFlashcards();
+    
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('flashcards-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'flashcards',
+          filter: `module_id=eq.${moduleId}`
+        },
+        () => {
+          loadFlashcards();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [moduleId]);
 
   const loadFlashcards = async () => {
-    // Load from local storage for now
-    const saved = localStorage.getItem(`flashcards:${moduleId}`);
-    if (saved) {
-      setFlashcards(JSON.parse(saved));
+    const { data, error } = await supabase
+      .from('flashcards')
+      .select('*')
+      .eq('module_id', moduleId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error loading flashcards:', error);
+      return;
     }
+
+    setFlashcards(data || []);
   };
 
   const generateFlashcards = async () => {
@@ -52,9 +83,22 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
       }
 
       const flashcards = data.flashcards || [];
-      setFlashcards(flashcards);
-      localStorage.setItem(`flashcards:${moduleId}`, JSON.stringify(flashcards));
-      toast.success("Flashcards generated!");
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      // Save to database
+      for (const card of flashcards) {
+        await supabase.from('flashcards').insert({
+          module_id: moduleId,
+          question: card.question,
+          answer: card.answer,
+          created_by: user.id
+        });
+      }
+      
+      toast.success("Flashcards generated and saved!");
     } catch (error: any) {
       console.error('Error generating flashcards:', error);
       toast.error(error.message || "Failed to generate flashcards");
@@ -82,72 +126,122 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
     setFlipped(false);
   };
 
-  const saveEdit = () => {
-    const updated = [...flashcards];
-    updated[currentIndex] = {
-      question: editedQuestion,
-      answer: editedAnswer
-    };
-    setFlashcards(updated);
-    localStorage.setItem(`flashcards:${moduleId}`, JSON.stringify(updated));
-    setIsEditing(false);
-    toast.success("Flashcard updated!");
+  const startCreating = () => {
+    setEditedQuestion("");
+    setEditedAnswer("");
+    setIsCreating(true);
+    setFlipped(false);
+  };
+
+  const saveEdit = async () => {
+    try {
+      const current = flashcards[currentIndex];
+      
+      if (isCreating) {
+        // Create new flashcard
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        
+        const { error } = await supabase.from('flashcards').insert({
+          module_id: moduleId,
+          question: editedQuestion,
+          answer: editedAnswer,
+          created_by: user.id
+        });
+        
+        if (error) throw error;
+        toast.success("Flashcard created!");
+      } else {
+        // Update existing flashcard
+        const { error } = await supabase
+          .from('flashcards')
+          .update({
+            question: editedQuestion,
+            answer: editedAnswer
+          })
+          .eq('id', current.id);
+        
+        if (error) throw error;
+        toast.success("Flashcard updated!");
+      }
+      
+      setIsEditing(false);
+      setIsCreating(false);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save flashcard");
+    }
   };
 
   const cancelEdit = () => {
     setIsEditing(false);
+    setIsCreating(false);
   };
 
-  const deleteCard = () => {
-    const updated = flashcards.filter((_, idx) => idx !== currentIndex);
-    setFlashcards(updated);
-    localStorage.setItem(`flashcards:${moduleId}`, JSON.stringify(updated));
-    
-    if (currentIndex >= updated.length && updated.length > 0) {
-      setCurrentIndex(updated.length - 1);
+  const deleteCard = async () => {
+    try {
+      const current = flashcards[currentIndex];
+      
+      const { error } = await supabase
+        .from('flashcards')
+        .delete()
+        .eq('id', current.id);
+      
+      if (error) throw error;
+      
+      if (currentIndex >= flashcards.length - 1 && flashcards.length > 1) {
+        setCurrentIndex(flashcards.length - 2);
+      }
+      
+      toast.success("Flashcard deleted!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete flashcard");
     }
-    
-    toast.success("Flashcard deleted!");
   };
 
-  if (flashcards.length === 0) {
+  if (flashcards.length === 0 && !isCreating) {
     return (
       <Card className="shadow-card-custom">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            AI Flashcards
+            Flashcards
           </CardTitle>
           <CardDescription>
-            Generate interactive flashcards to help you study {moduleTopic}
+            Generate AI-powered flashcards or create your own to study {moduleTopic}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-12">
+        <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
           <p className="text-muted-foreground mb-6 text-center">
-            No flashcards yet. Generate AI-powered flashcards to start learning!
+            No flashcards yet. Generate with AI or create your own!
           </p>
-          <Button onClick={generateFlashcards} disabled={loading} size="lg">
-            <Sparkles className="w-4 h-4 mr-2" />
-            {loading ? "Generating..." : "Generate Flashcards"}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={generateFlashcards} disabled={loading} size="lg">
+              <Sparkles className="w-4 h-4 mr-2" />
+              {loading ? "Generating..." : "Generate with AI"}
+            </Button>
+            <Button onClick={startCreating} variant="outline" size="lg">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Manually
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
   }
-
-  const currentCard = flashcards[currentIndex];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Flashcards</h3>
-          <p className="text-sm text-muted-foreground">
-            Card {currentIndex + 1} of {flashcards.length}
-          </p>
+          {!isCreating && (
+            <p className="text-sm text-muted-foreground">
+              Card {currentIndex + 1} of {flashcards.length}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
-          {isEditing ? (
+          {isEditing || isCreating ? (
             <>
               <Button onClick={saveEdit} size="sm">
                 <Save className="w-4 h-4 mr-2" />
@@ -160,6 +254,10 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
             </>
           ) : (
             <>
+              <Button onClick={startCreating} size="sm" variant="outline">
+                <Plus className="w-4 h-4 mr-2" />
+                New
+              </Button>
               <Button onClick={startEditing} size="sm" variant="outline">
                 <Edit2 className="w-4 h-4 mr-2" />
                 Edit
@@ -170,14 +268,14 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
               </Button>
               <Button onClick={generateFlashcards} disabled={loading} variant="outline">
                 <RotateCw className="w-4 h-4 mr-2" />
-                Regenerate
+                AI Generate
               </Button>
             </>
           )}
         </div>
       </div>
 
-      {isEditing ? (
+      {isEditing || isCreating ? (
         <Card className="shadow-card-custom min-h-[400px]">
           <CardContent className="p-8 space-y-6">
             <div className="space-y-2">
@@ -216,7 +314,7 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
               </span>
             </div>
             <p className="text-xl font-medium">
-              {flipped ? currentCard.answer : currentCard.question}
+              {flipped ? flashcards[currentIndex]?.answer : flashcards[currentIndex]?.question}
             </p>
             <p className="text-sm text-muted-foreground mt-6">
               Click card to flip
@@ -225,34 +323,36 @@ const FlashcardsTab = ({ moduleId, moduleTopic }: FlashcardsTabProps) => {
         </Card>
       )}
 
-      <div className="flex items-center justify-center gap-4">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={prevCard}
-          disabled={flashcards.length <= 1}
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </Button>
-        <div className="flex gap-2">
-          {flashcards.map((_, idx) => (
-            <div
-              key={idx}
-              className={`w-2 h-2 rounded-full ${
-                idx === currentIndex ? "bg-primary" : "bg-muted"
-              }`}
-            />
-          ))}
+      {!isCreating && !isEditing && (
+        <div className="flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={prevCard}
+            disabled={flashcards.length <= 1}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex gap-2">
+            {flashcards.map((_, idx) => (
+              <div
+                key={idx}
+                className={`w-2 h-2 rounded-full ${
+                  idx === currentIndex ? "bg-primary" : "bg-muted"
+                }`}
+              />
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={nextCard}
+            disabled={flashcards.length <= 1}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={nextCard}
-          disabled={flashcards.length <= 1}
-        >
-          <ChevronRight className="w-4 h-4" />
-        </Button>
-      </div>
+      )}
     </div>
   );
 };

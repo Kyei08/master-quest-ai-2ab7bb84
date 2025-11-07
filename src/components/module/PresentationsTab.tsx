@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Presentation, Download, Sparkles, Edit2, Save, X, Trash2 } from "lucide-react";
+import { Presentation, Download, Sparkles, Edit2, Save, X, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -13,27 +13,108 @@ interface PresentationsTabProps {
 }
 
 interface Slide {
+  id?: string;
   title: string;
   content: string;
+  slide_order?: number;
+}
+
+interface PresentationData {
+  id: string;
+  title: string;
+  module_id: string;
+  created_by: string;
 }
 
 const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
+  const [presentations, setPresentations] = useState<PresentationData[]>([]);
+  const [currentPresentationId, setCurrentPresentationId] = useState<string | null>(null);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
   const [editedContent, setEditedContent] = useState("");
 
   useEffect(() => {
-    loadPresentation();
-  }, [moduleId]);
+    loadPresentations();
+    
+    // Subscribe to real-time updates for presentations
+    const presentationsChannel = supabase
+      .channel('presentations-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'presentations',
+          filter: `module_id=eq.${moduleId}`
+        },
+        () => {
+          loadPresentations();
+        }
+      )
+      .subscribe();
 
-  const loadPresentation = async () => {
-    const saved = localStorage.getItem(`presentation:${moduleId}`);
-    if (saved) {
-      setSlides(JSON.parse(saved));
+    // Subscribe to real-time updates for slides
+    const slidesChannel = supabase
+      .channel('slides-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'presentation_slides'
+        },
+        () => {
+          if (currentPresentationId) {
+            loadSlides(currentPresentationId);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(presentationsChannel);
+      supabase.removeChannel(slidesChannel);
+    };
+  }, [moduleId, currentPresentationId]);
+
+  const loadPresentations = async () => {
+    const { data, error } = await supabase
+      .from('presentations')
+      .select('*')
+      .eq('module_id', moduleId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading presentations:', error);
+      return;
     }
+
+    setPresentations(data || []);
+    
+    // Load the first presentation if available
+    if (data && data.length > 0 && !currentPresentationId) {
+      setCurrentPresentationId(data[0].id);
+      loadSlides(data[0].id);
+    }
+  };
+
+  const loadSlides = async (presentationId: string) => {
+    const { data, error } = await supabase
+      .from('presentation_slides')
+      .select('*')
+      .eq('presentation_id', presentationId)
+      .order('slide_order', { ascending: true });
+
+    if (error) {
+      console.error('Error loading slides:', error);
+      return;
+    }
+
+    setSlides(data || []);
   };
 
   const generatePresentation = async () => {
@@ -50,10 +131,37 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
         return;
       }
 
-      const slides = data.slides || [];
-      setSlides(slides);
-      localStorage.setItem(`presentation:${moduleId}`, JSON.stringify(slides));
-      toast.success("Presentation generated!");
+      const slidesData = data.slides || [];
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      // Create presentation
+      const { data: presentation, error: presentationError } = await supabase
+        .from('presentations')
+        .insert({
+          module_id: moduleId,
+          title: `${moduleTopic} Presentation`,
+          created_by: user.id
+        })
+        .select()
+        .single();
+      
+      if (presentationError) throw presentationError;
+      
+      // Save slides
+      for (let i = 0; i < slidesData.length; i++) {
+        await supabase.from('presentation_slides').insert({
+          presentation_id: presentation.id,
+          slide_order: i,
+          title: slidesData[i].title,
+          content: slidesData[i].content
+        });
+      }
+      
+      setCurrentPresentationId(presentation.id);
+      toast.success("Presentation generated and saved!");
     } catch (error: any) {
       console.error('Error generating presentation:', error);
       toast.error(error.message || "Failed to generate presentation");
@@ -73,54 +181,135 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
     setIsEditing(true);
   };
 
-  const saveEdit = () => {
-    const updated = [...slides];
-    updated[currentSlide] = {
-      title: editedTitle,
-      content: editedContent
-    };
-    setSlides(updated);
-    localStorage.setItem(`presentation:${moduleId}`, JSON.stringify(updated));
-    setIsEditing(false);
-    toast.success("Slide updated!");
+  const startCreating = () => {
+    setEditedTitle("");
+    setEditedContent("");
+    setIsCreating(true);
+  };
+
+  const saveEdit = async () => {
+    try {
+      if (isCreating) {
+        // Create new slide
+        if (!currentPresentationId) {
+          // Need to create a presentation first
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) throw new Error('Not authenticated');
+          
+          const { data: presentation, error: presentationError } = await supabase
+            .from('presentations')
+            .insert({
+              module_id: moduleId,
+              title: `${moduleTopic} Presentation`,
+              created_by: user.id
+            })
+            .select()
+            .single();
+          
+          if (presentationError) throw presentationError;
+          setCurrentPresentationId(presentation.id);
+          
+          // Create slide
+          const { error: slideError } = await supabase
+            .from('presentation_slides')
+            .insert({
+              presentation_id: presentation.id,
+              slide_order: 0,
+              title: editedTitle,
+              content: editedContent
+            });
+          
+          if (slideError) throw slideError;
+        } else {
+          // Add to existing presentation
+          const { error } = await supabase
+            .from('presentation_slides')
+            .insert({
+              presentation_id: currentPresentationId,
+              slide_order: slides.length,
+              title: editedTitle,
+              content: editedContent
+            });
+          
+          if (error) throw error;
+        }
+        
+        toast.success("Slide created!");
+      } else {
+        // Update existing slide
+        const current = slides[currentSlide];
+        
+        const { error } = await supabase
+          .from('presentation_slides')
+          .update({
+            title: editedTitle,
+            content: editedContent
+          })
+          .eq('id', current.id);
+        
+        if (error) throw error;
+        toast.success("Slide updated!");
+      }
+      
+      setIsEditing(false);
+      setIsCreating(false);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save slide");
+    }
   };
 
   const cancelEdit = () => {
     setIsEditing(false);
+    setIsCreating(false);
   };
 
-  const deleteSlide = () => {
-    const updated = slides.filter((_, idx) => idx !== currentSlide);
-    setSlides(updated);
-    localStorage.setItem(`presentation:${moduleId}`, JSON.stringify(updated));
-    
-    if (currentSlide >= updated.length && updated.length > 0) {
-      setCurrentSlide(updated.length - 1);
+  const deleteSlide = async () => {
+    try {
+      const current = slides[currentSlide];
+      
+      const { error } = await supabase
+        .from('presentation_slides')
+        .delete()
+        .eq('id', current.id);
+      
+      if (error) throw error;
+      
+      if (currentSlide >= slides.length - 1 && slides.length > 1) {
+        setCurrentSlide(slides.length - 2);
+      }
+      
+      toast.success("Slide deleted!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete slide");
     }
-    
-    toast.success("Slide deleted!");
   };
 
-  if (slides.length === 0) {
+  if (slides.length === 0 && !isCreating) {
     return (
       <Card className="shadow-card-custom">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Presentation className="w-5 h-5 text-primary" />
-            AI Presentation
+            Presentations
           </CardTitle>
           <CardDescription>
-            Generate a PowerPoint-style presentation for {moduleTopic}
+            Generate AI-powered presentations or create your own for {moduleTopic}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-12">
+        <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
           <p className="text-muted-foreground mb-6 text-center">
-            No presentation yet. Generate an AI-powered presentation to visualize key concepts!
+            No presentations yet. Generate with AI or create your own!
           </p>
-          <Button onClick={generatePresentation} disabled={loading} size="lg">
-            <Sparkles className="w-4 h-4 mr-2" />
-            {loading ? "Generating..." : "Generate Presentation"}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={generatePresentation} disabled={loading} size="lg">
+              <Sparkles className="w-4 h-4 mr-2" />
+              {loading ? "Generating..." : "Generate with AI"}
+            </Button>
+            <Button onClick={startCreating} variant="outline" size="lg">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Manually
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -131,12 +320,14 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Presentation</h3>
-          <p className="text-sm text-muted-foreground">
-            Slide {currentSlide + 1} of {slides.length}
-          </p>
+          {!isCreating && (
+            <p className="text-sm text-muted-foreground">
+              Slide {currentSlide + 1} of {slides.length}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
-          {isEditing ? (
+          {isEditing || isCreating ? (
             <>
               <Button onClick={saveEdit} size="sm">
                 <Save className="w-4 h-4 mr-2" />
@@ -149,6 +340,10 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
             </>
           ) : (
             <>
+              <Button onClick={startCreating} size="sm" variant="outline">
+                <Plus className="w-4 h-4 mr-2" />
+                New Slide
+              </Button>
               <Button onClick={startEditing} size="sm" variant="outline">
                 <Edit2 className="w-4 h-4 mr-2" />
                 Edit
@@ -159,7 +354,7 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
               </Button>
               <Button onClick={generatePresentation} disabled={loading} variant="outline">
                 <Sparkles className="w-4 h-4 mr-2" />
-                Regenerate
+                AI Generate
               </Button>
               <Button onClick={downloadPresentation} variant="outline">
                 <Download className="w-4 h-4 mr-2" />
@@ -170,7 +365,7 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
         </div>
       </div>
 
-      {isEditing ? (
+      {isEditing || isCreating ? (
         <Card className="shadow-card-custom min-h-[500px]">
           <CardContent className="p-12 space-y-6">
             <div className="space-y-2">
@@ -201,42 +396,44 @@ const PresentationsTab = ({ moduleId, moduleTopic }: PresentationsTabProps) => {
         <Card className="shadow-card-custom min-h-[500px] bg-gradient-to-br from-background to-muted/20">
           <CardContent className="p-12">
             <div className="space-y-8">
-              <h2 className="text-4xl font-bold">{slides[currentSlide].title}</h2>
+              <h2 className="text-4xl font-bold">{slides[currentSlide]?.title}</h2>
               <div className="text-lg leading-relaxed whitespace-pre-line">
-                {slides[currentSlide].content}
+                {slides[currentSlide]?.content}
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
-          disabled={currentSlide === 0}
-        >
-          Previous
-        </Button>
-        <div className="flex gap-2">
-          {slides.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentSlide(idx)}
-              className={`w-8 h-2 rounded-full transition-colors ${
-                idx === currentSlide ? "bg-primary" : "bg-muted hover:bg-muted-foreground/20"
-              }`}
-            />
-          ))}
+      {!isCreating && !isEditing && (
+        <div className="flex items-center justify-between">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
+            disabled={currentSlide === 0}
+          >
+            Previous
+          </Button>
+          <div className="flex gap-2">
+            {slides.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentSlide(idx)}
+                className={`w-8 h-2 rounded-full transition-colors ${
+                  idx === currentSlide ? "bg-primary" : "bg-muted hover:bg-muted-foreground/20"
+                }`}
+              />
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
+            disabled={currentSlide === slides.length - 1}
+          >
+            Next
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
-          disabled={currentSlide === slides.length - 1}
-        >
-          Next
-        </Button>
-      </div>
+      )}
     </div>
   );
 };
