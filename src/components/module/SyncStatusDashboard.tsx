@@ -1,11 +1,11 @@
-import { Activity, AlertTriangle, CheckCircle2, Clock, Radio, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Clock, Radio, XCircle, Wifi, WifiOff, Signal } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useConnectionQuality } from "@/hooks/useConnectionQuality";
 
 interface QueueItem {
   id: string;
@@ -38,7 +38,7 @@ export const SyncStatusDashboard = ({
   registeredCount,
   syncing,
 }: SyncStatusDashboardProps) => {
-  const isOnline = useOnlineStatus();
+  const connectionQuality = useConnectionQuality();
 
   const formatTabName = (item: QueueItem) => {
     if (item.draftType === "quiz") {
@@ -68,6 +68,31 @@ export const SyncStatusDashboard = ({
     ? Math.round((syncStats.success / syncStats.total) * 100) 
     : 100;
 
+  const getConnectionIcon = () => {
+    switch (connectionQuality.status) {
+      case "excellent":
+        return <Wifi className="w-4 h-4 text-success" />;
+      case "good":
+        return <Signal className="w-4 h-4 text-success" />;
+      case "poor":
+        return <Signal className="w-4 h-4 text-warning" />;
+      case "offline":
+        return <WifiOff className="w-4 h-4 text-destructive" />;
+    }
+  };
+
+  const getConnectionBadgeVariant = () => {
+    switch (connectionQuality.status) {
+      case "excellent":
+      case "good":
+        return "default" as const;
+      case "poor":
+        return "secondary" as const;
+      case "offline":
+        return "destructive" as const;
+    }
+  };
+
   // Group queue items by tab
   const groupedItems = queueItems.reduce((acc, item) => {
     const tabName = formatTabName(item);
@@ -91,28 +116,76 @@ export const SyncStatusDashboard = ({
 
         <ScrollArea className="h-[calc(100vh-8rem)] mt-6">
           <div className="space-y-4 pr-4">
-            {/* Connection Status */}
+            {/* Connection Quality */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Radio className={cn(
-                    "w-4 h-4",
-                    isOnline ? "text-success animate-pulse" : "text-destructive"
-                  )} />
-                  Connection Status
+                  {getConnectionIcon()}
+                  Internet Connection
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Status</span>
-                  <Badge variant={isOnline ? "default" : "destructive"}>
-                    {isOnline ? "Online" : "Offline"}
+                  <span className="text-sm text-muted-foreground">Quality</span>
+                  <Badge variant={getConnectionBadgeVariant()}>
+                    {connectionQuality.status.charAt(0).toUpperCase() + connectionQuality.status.slice(1)}
                   </Badge>
                 </div>
+                
+                {connectionQuality.latency !== null && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Response Time</span>
+                    <span className={cn(
+                      "text-sm font-medium",
+                      connectionQuality.latency > 2000 && "text-destructive",
+                      connectionQuality.latency > 1000 && connectionQuality.latency <= 2000 && "text-warning"
+                    )}>
+                      {connectionQuality.latency}ms
+                    </span>
+                  </div>
+                )}
+
+                {connectionQuality.errorDetails && (
+                  <div className="p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                    <p className="text-xs text-destructive font-medium mb-1">
+                      {connectionQuality.errorDetails.includes("Server error") ? "⚠️ Server Issue" : "📡 Connection Issue"}
+                    </p>
+                    <p className="text-xs text-muted-foreground break-words">
+                      {connectionQuality.errorDetails}
+                    </p>
+                  </div>
+                )}
+
+                {connectionQuality.lastChecked && (
+                  <div className="text-xs text-muted-foreground pt-2 border-t">
+                    Last checked: {connectionQuality.lastChecked.toLocaleTimeString()}
+                  </div>
+                )}
+
                 {syncing && (
-                  <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                  <div className="text-xs text-muted-foreground flex items-center gap-1 pt-2 border-t">
                     <Clock className="w-3 h-3 animate-spin" />
                     Syncing in progress...
+                  </div>
+                )}
+
+                {/* Diagnosis Help */}
+                {syncStats.failed > 0 && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs font-medium mb-1">💡 Troubleshooting:</p>
+                    {connectionQuality.status === "offline" || connectionQuality.status === "poor" ? (
+                      <p className="text-xs text-muted-foreground">
+                        Your internet connection is {connectionQuality.status}. Try moving closer to your router or switching to a better network.
+                      </p>
+                    ) : connectionQuality.errorDetails?.includes("Server error") ? (
+                      <p className="text-xs text-muted-foreground">
+                        Server is experiencing issues. Your changes are safely queued and will sync automatically when the server recovers.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Internet is working fine. Check the error details in pending changes below.
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>
