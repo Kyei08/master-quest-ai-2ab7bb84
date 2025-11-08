@@ -99,6 +99,95 @@ export const useSyncQueue = () => {
     setQueue((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const syncItem = async (item: QueueItem) => {
+    try {
+      // Check if there's a newer version on the server to prevent conflicts
+      const { data: existingData, error: fetchError } = await supabase
+        .from("module_progress_drafts")
+        .select("updated_at")
+        .eq("module_id", item.moduleId)
+        .eq("draft_type", item.draftType)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      // If there's a newer version on server, skip this item
+      if (existingData?.updated_at) {
+        const serverTimestamp = new Date(existingData.updated_at).getTime();
+        const localTimestamp = item.timestamp;
+        
+        if (serverTimestamp > localTimestamp) {
+          console.log("Skipping sync - server has newer version");
+          removeFromQueue(item.id);
+          
+          // Notify user about the conflict
+          const tabName = item.draftType === 'quiz' 
+            ? `${item.quizType || 'quiz'}` 
+            : item.draftType;
+          
+          toast.info("🔄 Conflict Resolved", {
+            description: `Your local changes to ${tabName} were skipped. A newer version from another device is already saved.`,
+            duration: 6000,
+          });
+          
+          return { success: true };
+        }
+      }
+
+      // Perform the upsert with conflict detection
+      const { error } = await supabase
+        .from("module_progress_drafts")
+        .upsert([{
+          module_id: item.moduleId,
+          draft_type: item.draftType,
+          quiz_type: item.quizType,
+          data: item.data as any,
+        }], {
+          onConflict: 'module_id,draft_type,quiz_type',
+          ignoreDuplicates: false
+        });
+
+      if (error) throw error;
+
+      removeFromQueue(item.id);
+      return { success: true };
+    } catch (error: any) {
+      console.error("Failed to sync queued item:", error);
+      
+      // Check if it's a network error vs other errors
+      const isNetworkError = error?.message?.includes("fetch") || 
+                             error?.message?.includes("network") ||
+                             error?.code === "PGRST301";
+      
+      if (item.retryCount + 1 >= MAX_RETRIES) {
+        // Max retries reached, remove from queue
+        removeFromQueue(item.id);
+        toast.error(`Sync failed: ${isNetworkError ? 'Connection issue' : 'Server error'}`, {
+          description: "Changes could not be saved after multiple attempts",
+          duration: 5000,
+        });
+      } else {
+        // Update retry info with exponential backoff
+        updateRetryInfo(item.id);
+      }
+      
+      return { success: false, error };
+    }
+  };
+
+  const retryItem = async (itemId: string) => {
+    const item = queue.find(q => q.id === itemId);
+    if (!item || processing) return;
+
+    setProcessing(true);
+    const result = await syncItem(item);
+    setProcessing(false);
+
+    if (result.success) {
+      toast.success("✅ Item synced successfully");
+    }
+  };
+
   const processQueue = async () => {
     if (processing || queue.length === 0) return;
 
@@ -114,78 +203,10 @@ export const useSyncQueue = () => {
     let failCount = 0;
 
     for (const item of itemsToProcess) {
-      try {
-        // Check if there's a newer version on the server to prevent conflicts
-        const { data: existingData, error: fetchError } = await supabase
-          .from("module_progress_drafts")
-          .select("updated_at")
-          .eq("module_id", item.moduleId)
-          .eq("draft_type", item.draftType)
-          .maybeSingle();
-
-        if (fetchError) throw fetchError;
-
-        // If there's a newer version on server, skip this item
-        if (existingData?.updated_at) {
-          const serverTimestamp = new Date(existingData.updated_at).getTime();
-          const localTimestamp = item.timestamp;
-          
-          if (serverTimestamp > localTimestamp) {
-            console.log("Skipping sync - server has newer version");
-            removeFromQueue(item.id);
-            
-            // Notify user about the conflict
-            const tabName = item.draftType === 'quiz' 
-              ? `${item.quizType || 'quiz'}` 
-              : item.draftType;
-            
-            toast.info("🔄 Conflict Resolved", {
-              description: `Your local changes to ${tabName} were skipped. A newer version from another device is already saved.`,
-              duration: 6000,
-            });
-            
-            successCount++; // Count as success since we handled it
-            continue;
-          }
-        }
-
-        // Perform the upsert with conflict detection
-        const { error } = await supabase
-          .from("module_progress_drafts")
-          .upsert([{
-            module_id: item.moduleId,
-            draft_type: item.draftType,
-            quiz_type: item.quizType,
-            data: item.data as any,
-          }], {
-            onConflict: 'module_id,draft_type,quiz_type',
-            ignoreDuplicates: false
-          });
-
-        if (error) throw error;
-
-        removeFromQueue(item.id);
+      const result = await syncItem(item);
+      if (result.success) {
         successCount++;
-      } catch (error: any) {
-        console.error("Failed to sync queued item:", error);
-        
-        // Check if it's a network error vs other errors
-        const isNetworkError = error?.message?.includes("fetch") || 
-                               error?.message?.includes("network") ||
-                               error?.code === "PGRST301";
-        
-        if (item.retryCount + 1 >= MAX_RETRIES) {
-          // Max retries reached, remove from queue
-          removeFromQueue(item.id);
-          toast.error(`Sync failed: ${isNetworkError ? 'Connection issue' : 'Server error'}`, {
-            description: "Changes could not be saved after multiple attempts",
-            duration: 5000,
-          });
-        } else {
-          // Update retry info with exponential backoff
-          updateRetryInfo(item.id);
-        }
-        
+      } else {
         failCount++;
       }
     }
@@ -211,6 +232,7 @@ export const useSyncQueue = () => {
     addToQueue,
     removeFromQueue,
     processQueue,
+    retryItem,
     queueSize: queue.length,
     processing,
     getNextRetryTime,

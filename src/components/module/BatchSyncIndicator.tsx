@@ -28,6 +28,7 @@ interface BatchSyncIndicatorProps {
   registeredCount?: number;
   syncStats?: { success: number; failed: number; total: number };
   autoSyncing?: boolean;
+  onRetryItem: (itemId: string) => void;
 }
 
 export const BatchSyncIndicator = ({ 
@@ -39,7 +40,8 @@ export const BatchSyncIndicator = ({
   nextRetryTime,
   registeredCount = 0,
   syncStats = { success: 0, failed: 0, total: 0 },
-  autoSyncing = false
+  autoSyncing = false,
+  onRetryItem
 }: BatchSyncIndicatorProps) => {
   const isOnline = useOnlineStatus();
   const [dashboardOpen, setDashboardOpen] = useState(false);
@@ -69,6 +71,7 @@ export const BatchSyncIndicator = ({
         lastBatchSync={lastBatchSync}
         registeredCount={registeredCount}
         syncing={syncing}
+        onRetryItem={onRetryItem}
       />
       
       <div className="space-y-3">

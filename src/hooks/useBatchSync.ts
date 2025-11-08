@@ -13,7 +13,7 @@ export const useBatchSync = (moduleId: string, onConflict?: (tabName: string) =>
   const [syncing, setSyncing] = useState(false);
   const [lastBatchSync, setLastBatchSync] = useState<Date | null>(null);
   const [syncStats, setSyncStats] = useState({ success: 0, failed: 0, total: 0 });
-  const { addToQueue, queueSize, queueItems, getNextRetryTime, processQueue } = useSyncQueue();
+  const { addToQueue, queueSize, queueItems, getNextRetryTime, processQueue, retryItem } = useSyncQueue();
   const [registeredItems, setRegisteredItems] = useState<Map<string, BatchSyncItem>>(new Map());
 
   // Register a tab's sync function
@@ -175,5 +175,6 @@ export const useBatchSync = (moduleId: string, onConflict?: (tabName: string) =>
     registeredCount: registeredItems.size,
     syncStats,
     onConflict,
+    retryItem,
   };
 };

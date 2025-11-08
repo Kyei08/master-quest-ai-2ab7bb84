@@ -1,6 +1,7 @@
-import { Activity, AlertTriangle, CheckCircle2, Clock, Radio, XCircle, Wifi, WifiOff, Signal } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Clock, Radio, XCircle, Wifi, WifiOff, Signal, RotateCw } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,6 +28,7 @@ interface SyncStatusDashboardProps {
   lastBatchSync: Date | null;
   registeredCount: number;
   syncing: boolean;
+  onRetryItem: (itemId: string) => void;
 }
 
 export const SyncStatusDashboard = ({
@@ -37,6 +39,7 @@ export const SyncStatusDashboard = ({
   lastBatchSync,
   registeredCount,
   syncing,
+  onRetryItem,
 }: SyncStatusDashboardProps) => {
   const connectionQuality = useConnectionQuality();
 
@@ -270,7 +273,7 @@ export const SyncStatusDashboard = ({
                           </Badge>
                         </div>
                         {items.map((item) => (
-                          <div key={item.id} className="pl-3 border-l-2 border-muted space-y-1">
+                          <div key={item.id} className="pl-3 border-l-2 border-muted space-y-2">
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-muted-foreground">Queued</span>
                               <span>{formatTimeAgo(item.timestamp)}</span>
@@ -283,6 +286,16 @@ export const SyncStatusDashboard = ({
                                 </span>
                               </div>
                             )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full h-7 text-xs"
+                              onClick={() => onRetryItem(item.id)}
+                              disabled={syncing}
+                            >
+                              <RotateCw className={cn("w-3 h-3 mr-1", syncing && "animate-spin")} />
+                              Retry Now
+                            </Button>
                           </div>
                         ))}
                       </div>

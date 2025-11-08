@@ -29,6 +29,7 @@ interface BatchSyncContextType {
   registeredCount: number;
   syncStats: { success: number; failed: number; total: number };
   onConflict?: (tabName: string) => void;
+  retryItem: (itemId: string) => Promise<void>;
 }
 
 const BatchSyncContext = createContext<BatchSyncContextType | undefined>(undefined);
@@ -45,6 +46,7 @@ const defaultBatchSyncContext: BatchSyncContextType = {
   registeredCount: 0,
   syncStats: { success: 0, failed: 0, total: 0 },
   onConflict: undefined,
+  retryItem: async () => {},
 };
 
 export const useBatchSyncContext = () => {

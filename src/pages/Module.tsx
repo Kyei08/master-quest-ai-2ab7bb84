@@ -361,7 +361,7 @@ const ModuleContent = ({
   onDismissConflicts: () => void;
   onRefreshModule: () => void;
 }) => {
-  const { syncing, lastBatchSync, syncAll, queueSize, queueItems, nextRetryTime, registeredCount, syncStats } = useBatchSyncContext();
+  const { syncing, lastBatchSync, syncAll, queueSize, queueItems, nextRetryTime, registeredCount, syncStats, retryItem } = useBatchSyncContext();
   const previousTabRef = useRef(activeTab);
   const [autoSyncInProgress, setAutoSyncInProgress] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -469,6 +469,7 @@ const ModuleContent = ({
         registeredCount={registeredCount}
         syncStats={syncStats}
         autoSyncing={autoSyncInProgress}
+        onRetryItem={retryItem}
       />
       
       <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-3 sm:mt-4">
