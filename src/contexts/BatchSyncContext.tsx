@@ -33,10 +33,25 @@ interface BatchSyncContextType {
 
 const BatchSyncContext = createContext<BatchSyncContextType | undefined>(undefined);
 
+const defaultBatchSyncContext: BatchSyncContextType = {
+  syncing: false,
+  lastBatchSync: null,
+  syncAll: async () => {},
+  register: () => {},
+  unregister: () => {},
+  queueSize: 0,
+  queueItems: [],
+  nextRetryTime: null,
+  registeredCount: 0,
+  syncStats: { success: 0, failed: 0, total: 0 },
+  onConflict: undefined,
+};
+
 export const useBatchSyncContext = () => {
   const context = useContext(BatchSyncContext);
   if (!context) {
-    throw new Error("useBatchSyncContext must be used within BatchSyncProvider");
+    console.warn("useBatchSyncContext must be used within BatchSyncProvider - falling back to default context");
+    return defaultBatchSyncContext;
   }
   return context;
 };
