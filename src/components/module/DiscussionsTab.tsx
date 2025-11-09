@@ -65,7 +65,10 @@ export const DiscussionsTab = ({ moduleId }: DiscussionsTabProps) => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       // Get discussions with profile data
       const { data: discussionsData, error: discussionsError } = await supabase

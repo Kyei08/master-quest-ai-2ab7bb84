@@ -114,7 +114,10 @@ export const DiscussionDetailDialog = ({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       // Load discussion
       const { data: discussionData, error: discussionError } = await supabase

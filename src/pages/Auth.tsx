@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,9 +19,12 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const [searchParams] = [new URLSearchParams(window.location.search)];
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        navigate("/dashboard");
+        const redirectParam = searchParams.get('redirect');
+        const target = redirectParam ? decodeURIComponent(redirectParam) : "/dashboard";
+        navigate(target, { replace: true });
       }
     });
 
@@ -45,7 +48,7 @@ const Auth = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}${(() => { const p = new URLSearchParams(window.location.search).get('redirect'); return p ? decodeURIComponent(p) : '/dashboard'; })()}`,
             data: {
               full_name: fullName,
               role: role,

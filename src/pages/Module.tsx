@@ -40,15 +40,17 @@ const Module = () => {
   const [memberCount, setMemberCount] = useState(0);
   const [conflictedTabs, setConflictedTabs] = useState<string[]>([]);
   const { presenceUsers, onlineCount } = useModulePresence(id);
+  const [needsAuth, setNeedsAuth] = useState(false);
 
   useEffect(() => {
     if (id) {
-      // If there's a share token, wait for it to complete before loading
       const shareToken = searchParams.get('share');
       if (shareToken) {
-        handleShareToken().then(() => {
-          loadModule();
-          loadMemberCount();
+        handleShareToken().then((joined) => {
+          if (joined) {
+            loadModule();
+            loadMemberCount();
+          }
         });
       } else {
         loadModule();
@@ -76,9 +78,14 @@ const Module = () => {
     });
   };
 
-  const handleShareToken = async () => {
+  const handleSignInToJoin = () => {
+    const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+    navigate(`/auth?redirect=${redirect}`);
+  };
+
+  const handleShareToken = async (): Promise<boolean> => {
     const shareToken = searchParams.get('share');
-    if (!shareToken) return;
+    if (!shareToken) return false;
 
     try {
       const { data: share, error: shareError } = await supabase
@@ -94,18 +101,17 @@ const Module = () => {
         toast.error('Invalid or expired share link', {
           description: 'This share link is no longer valid.',
         });
-        return;
+        return false;
+      }
+
+      // Check if user is signed in
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        setNeedsAuth(true);
+        return false;
       }
 
       // Check if already a member
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) {
-        toast.error('Please sign in to join this module', {
-          description: 'You need to be logged in to access shared modules.',
-        });
-        return;
-      }
-
       const { data: existingMember } = await supabase
         .from('module_members')
         .select('id')
@@ -131,6 +137,7 @@ const Module = () => {
 
       // Remove share param from URL
       navigate(`/module/${id}`, { replace: true });
+      return true;
     } catch (error) {
       console.error('Error handling share token:', error);
       toast.error('Failed to join module', {
@@ -140,6 +147,7 @@ const Module = () => {
           onClick: () => handleShareToken(),
         },
       });
+      return false;
     }
   };
 
@@ -261,6 +269,25 @@ const Module = () => {
       setLoading(false);
     }
   };
+
+  if (needsAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Join this module</CardTitle>
+            <CardDescription>
+              Sign in to view discussions and participate.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-2">
+            <Button onClick={handleSignInToJoin} className="flex-1">Sign in to join</Button>
+            <Button variant="outline" onClick={() => navigate("/")} className="flex-1">Back to Home</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!module) {
     return (
