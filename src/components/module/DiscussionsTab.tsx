@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSearchParams } from "react-router-dom";
 import {
   MessageCircle,
   Plus,
@@ -53,20 +54,35 @@ export const DiscussionsTab = ({ moduleId }: DiscussionsTabProps) => {
   );
   const [sortBy, setSortBy] = useState<"hot" | "top" | "new" | "resolved">("hot");
   const { presenceUsers } = useModulePresence(moduleId);
+  const [searchParams] = useSearchParams();
+  const shareToken = searchParams.get("share");
+  const readOnly = !!shareToken;
 
   useEffect(() => {
     loadDiscussions();
-  }, [moduleId]);
+  }, [moduleId, shareToken]);
 
   const loadDiscussions = async () => {
     try {
       setLoading(true);
 
+      if (shareToken) {
+        // Public, read-only load via edge function when share token is present
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/public-discussions?moduleId=${moduleId}&token=${shareToken}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error("Public discussions fetch failed");
+        }
+        const data = await res.json();
+        setDiscussions(data.discussions || []);
+        return;
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        setLoading(false);
+        setDiscussions([]);
         return;
       }
 
@@ -169,6 +185,11 @@ export const DiscussionsTab = ({ moduleId }: DiscussionsTabProps) => {
 
   const handleUpvote = async (discussionId: string) => {
     try {
+      if (readOnly) {
+        toast.info("Sign in to upvote or participate");
+        return;
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -245,10 +266,12 @@ export const DiscussionsTab = ({ moduleId }: DiscussionsTabProps) => {
                 </p>
               </div>
             </div>
-            <Button onClick={() => setNewDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Discussion
-            </Button>
+            {!readOnly && (
+              <Button onClick={() => setNewDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Discussion
+              </Button>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -294,10 +317,14 @@ export const DiscussionsTab = ({ moduleId }: DiscussionsTabProps) => {
               <p className="text-muted-foreground mb-4">
                 Be the first to start a discussion about this module
               </p>
-              <Button onClick={() => setNewDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Start Discussion
-              </Button>
+              {!readOnly ? (
+                <Button onClick={() => setNewDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Start Discussion
+                </Button>
+              ) : (
+                <p className="text-sm text-muted-foreground">Sign in to start a discussion</p>
+              )}
             </Card>
           ) : (
             <div className="space-y-4">
@@ -336,6 +363,7 @@ export const DiscussionsTab = ({ moduleId }: DiscussionsTabProps) => {
       {selectedDiscussion && (
         <DiscussionDetailDialog
           discussionId={selectedDiscussion}
+          moduleId={moduleId}
           open={!!selectedDiscussion}
           onOpenChange={(open) => !open && setSelectedDiscussion(null)}
           onUpdate={loadDiscussions}

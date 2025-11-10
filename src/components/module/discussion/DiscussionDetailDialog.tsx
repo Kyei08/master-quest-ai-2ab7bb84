@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +61,7 @@ interface Reply {
 
 interface DiscussionDetailDialogProps {
   discussionId: string;
+  moduleId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate: () => void;
@@ -67,6 +69,7 @@ interface DiscussionDetailDialogProps {
 
 export const DiscussionDetailDialog = ({
   discussionId,
+  moduleId,
   open,
   onOpenChange,
   onUpdate,
@@ -78,6 +81,9 @@ export const DiscussionDetailDialog = ({
   const [submitting, setSubmitting] = useState(false);
   const [isInstructor, setIsInstructor] = useState(false);
   const [error, setError] = useState("");
+  const [searchParams] = useSearchParams();
+  const shareToken = searchParams.get("share");
+  const readOnly = !!shareToken;
 
   useEffect(() => {
     if (open) {
@@ -111,11 +117,24 @@ export const DiscussionDetailDialog = ({
     try {
       setLoading(true);
 
+      if (readOnly) {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/public-discussions?moduleId=${moduleId}&token=${shareToken}&discussionId=${discussionId}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Public discussion fetch failed");
+        const data = await res.json();
+        if (!data.discussion) throw new Error("Not found");
+        setDiscussion({ ...data.discussion, user_upvoted: false });
+        setReplies((data.replies || []).map((r: any) => ({ ...r, user_upvoted: false })));
+        setIsInstructor(false);
+        return;
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        setLoading(false);
+        setDiscussion(null);
+        setReplies([]);
         return;
       }
 

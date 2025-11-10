@@ -47,10 +47,9 @@ const Module = () => {
       const shareToken = searchParams.get('share');
       if (shareToken) {
         handleShareToken().then((joined) => {
-          if (joined) {
-            loadModule();
-            loadMemberCount();
-          }
+          // Always attempt to load module; if RLS blocks, fallback enables public discussions
+          loadModule();
+          loadMemberCount();
         });
       } else {
         loadModule();
@@ -207,10 +206,19 @@ const Module = () => {
       }
     } catch (error: any) {
       console.error("Failed to load module:", error);
-      
+      const shareToken = searchParams.get('share');
       // Check if it's a permission error
       const isPermissionError = error?.code === 'PGRST116' || error?.message?.includes('row-level security');
-      
+
+      if (isPermissionError && shareToken && id) {
+        // Fallback: render a minimal shell so public discussions can load via share token
+        setModule({ id, topic: "Shared module", status: "in_progress", final_score: null });
+        toast.info("Viewing public discussions only", {
+          description: "Sign in to join and see full module content.",
+        });
+        return;
+      }
+
       toast.error("Failed to load module data", {
         description: isPermissionError 
           ? "You don't have permission to access this module. Please request access from the module creator."
